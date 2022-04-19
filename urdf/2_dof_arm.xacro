@@ -1,0 +1,70 @@
+<?xml version="1.0" ?>
+
+<robot name="2_dof_arm" xmlns:xacro="http://www.ros.org/wiki/xacro">
+    
+    <!-- This first link called "world" is empty -->
+    <link name="world"></link>
+
+
+    <!-- A simple fixed joint from our empty world link, to our base. -->
+    <!-- The base origin is offset from the world origin. -->
+    <joint name="base_joint" type="fixed">
+        <origin xyz="0. 0. 0." rpy="0. 0. 0."/>
+        <parent link="world"/>
+        <child link="base_link"/>        
+    </joint>
+    
+    <!-- Base link, fixed at origin. -->
+    <link name="base_link">
+        <visual>
+            <origin xyz="0. 0. 0." rpy="0. 0. 0."/>
+            <geometry>
+                <sphere radius="0.1"/>
+            </geometry>
+            <material name="Dark">
+                <color rgba=".1 .1 .1 1."/>
+            </material>
+        </visual>
+    </link>
+    
+    <joint name="joint_base_link__link1" type="revolute">
+        <parent link="base_link"/>
+        <child link="link1"/>
+        <origin xyz="0. 0. 0." rpy="0. 0. 0."/>
+        <axis xyz="0 0 1"/>
+        <limit lower="-6.141592654" upper="6.141592654" velocity="1000" effort="1000"/>
+    </joint>
+    
+    <link name="link1">
+        <visual>
+            <origin xyz="3. 0. 0." rpy="0. 1.570796 0."/>
+            <geometry>
+                <cylinder radius="0.1" length="6."/>
+            </geometry>
+            <material name="Green">
+                <color rgba=".1 .6 .1 1."/>
+            </material>
+        </visual>
+    </link>
+    
+    <joint name="joint_link1__link2" type="revolute">
+        <parent link="link1"/>
+        <child link="link2"/>
+        <origin xyz="6. 0. 0." rpy="0. 0. 0."/>
+        <axis xyz="0 0 1"/>
+        <limit lower="-6.141592654" upper="6.141592654" velocity="1000" effort="1000"/>
+    </joint>
+    
+    <link name="link2">
+        <visual>
+            <origin xyz="2. 0. 0." rpy="0. 1.570796 0."/>
+            <geometry>
+                <cylinder radius="0.1" length="4."/>
+            </geometry>
+            <material name="red">
+                <color rgba=".6 .1 .1 1."/>
+            </material>
+        </visual>
+    </link>
+    
+</robot>

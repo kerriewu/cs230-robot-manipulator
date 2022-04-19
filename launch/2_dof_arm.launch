@@ -1,0 +1,27 @@
+<launch>
+
+	<!-- Robot name -->
+    <param name="robot_description" command="$(find xacro)/xacro --inorder '$(find cs230-robot-manipulator)/urdf/2_dof_arm.xacro'"/>
+    <!--<param name="robot_description" textfile="$(find cs230-robot-manipulator)/urdf/2_dof_arm.xacro"/> -->
+	
+    <!-- Combine joint values -->
+	<node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
+    
+    <!-- Show in RVIZ -->
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find cs230-robot-manipulator)/rviz/config.rviz"/> 
+    
+    <!-- Send joint values -->
+    <node name="joint_state_publisher_gui" pkg="joint_state_publisher_gui" type="joint_state_publisher_gui">
+        <param name="use_gui" value="True"/>
+    </node>
+    
+    <!-- Controllers -->
+	<!-- <arg name="gui" default="true"/> -->
+    <!-- <include file="$(find gazebo_ros)/launch/empty_world.launch"/> -->
+	<!-- <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-param robot_description -urdf -model robot_arm"/> -->
+    
+    <!-- Gazebo -->
+	<!-- <rosparam file="$(find robot_arm)/yaml/controllers.yaml" command="load"/> -->
+    <!-- <node name="controller_spawner" pkg="controller_manager" type="spawner" args="arm_controller"/> -->
+    
+</launch>
