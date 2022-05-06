@@ -22,7 +22,6 @@ from gym_simulations.envs.discrete_2dof import Discrete2DoF
 
 class DQNRobotSolver():
     def __init__(self,
-     environment_name,
      n_observations,
      n_actions,
      n_episodes=1000,
@@ -105,6 +104,8 @@ class DQNRobotSolver():
     def run(self):
 
         scores = deque(maxlen=100)
+        successes = deque(maxlen=100)
+        max_rewards = deque(maxlen=100)
 
         for e in range(self.n_episodes):
 
@@ -113,32 +114,41 @@ class DQNRobotSolver():
             state = self.preprocess_state(init_state)
             done = False
             i = 0
+            max_reward = -np.Inf
 
-            while not done:
+            while not (done or i > 1000):
                 action = self.choose_action(state, self.get_epsilon(e))
-                next_state, reward, done, _ = self.env.step(action)
-                next_state = self.preprocess_state(next_state)
+                observation, reward, done, _ = self.env.step(action)
+                next_state = self.preprocess_state(observation)
                 self.remember(state, action, reward, next_state, done)
                 state = next_state
+                max_reward = max(max_reward, reward)
                 i += 1
+                if i % 25 == 0:
+                    print("step {}:".format(i))
+                    print("end_effector_location: {}, {}".format(observation['joint_locs'][1][0], observation['joint_locs'][1][1]))
+                    print("reward location: {}, {}".format(observation['reward_loc'][0],observation['reward_loc'][1]))
 
             scores.append(i)
             mean_score = np.mean(scores)
+            max_rewards.append(max_reward)
+            successes.append(done)
+            median_max_reward = np.median(max_rewards)
+            num_successes = np.count_nonzero(successes)
             if mean_score <= self.n_win_steps and e >= min_episodes:
                 if not self.quiet: print('Ran {} episodes. Solved after {} trials'.format(e, e - min_episodes))
                 return e - min_episodes
             if e % 1 == 0 and not self.quiet:
-                print('[Episode {}] - Mean steps to done over last {} episodes was {} steps.'.format(e, min_episodes, mean_score))
+                print('[Episode {}] - Mean steps before termination over last {} episodes was {} steps. Number of successes was {}. Median max reward was {}'.format(e, min_episodes, mean_score, num_successes, median_max_reward))
 
-            self.replay(self.batch_size)
+            for num_batches in range(int(i /  self.batch_size)):
+                self.replay(self.batch_size)
 
 
         if not self.quiet: print('Did not solve after {} episodes'.format(e))
         return e
 
 if __name__ == '__main__':
-
-    environment_name = 'CartPoleStayUp-v0'
 
     n_observations = 8
     n_actions = 4
@@ -157,7 +167,7 @@ if __name__ == '__main__':
     quiet = False
 
 
-    agent = DQNRobotSolver(     environment_name,
+    agent = DQNRobotSolver(
                                 n_observations,
                                 n_actions,
                                 n_episodes,

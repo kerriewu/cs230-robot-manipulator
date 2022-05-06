@@ -30,18 +30,10 @@ class Discrete2DoF(gym.Env):
         self.update_joint_locs()
         self.update_reward()
 
-        # 3 observations:
-        #   (1) Angles of each of the (2) joints
-        #   (2) End points (x, y) of each of the (2) joints
-        #   (3) Location (x, y) of the reward
-        self.observation_space = spaces.Dict({
-                "joint_angs" : spaces.Box(low=-np.pi, high=np.pi, shape=(2,),
-                        dtype=np.float32),
-                "joint_locs" : spaces.Box(low=-np.inf, high=np.inf,
-                        shape=(2, 2), dtype=np.float32),
-                "reward_loc" : spaces.Box(low=-np.inf, high=np.inf,
-                        shape=(1,), dtype=np.float32)
-        })
+        # 8x1 vector including 2 joint angles (rad), 2 joint locations (x, y
+        # cartesian coordinate pairs), and the reward location (x. y cartesian
+        # coordinate pair).
+        self.observation_space = spaces.Box(low=-np.inf,high=np.inf,shape=(8,))
 
         # Discrete actions: +joint 1, -joint1, +joint2, -joint2
         self.action_space = spaces.Discrete(4)
@@ -65,15 +57,28 @@ class Discrete2DoF(gym.Env):
         self.clock = None
 
     def _get_obs(self):
-        """ Returns a dictionary with observations from current state. """
-        return {
-                "joint_angs" : self.arm_angles,
-                "joint_locs" : self.joint_locs,
-                "reward_loc" : self.reward_loc}
+        """ Returns an 8x1 array with observations from current state. """
+        return np.array([
+                        self.arm_angles[0],
+                        self.arm_angles[1],
+                        self.joint_locs[0][0],
+                        self.joint_locs[0][1],
+                        self.joint_locs[1][0],
+                        self.joint_locs[1][1],
+                        self.reward_loc[0],
+                        self.reward_loc[1]
+                        ]).reshape(8,)
+
+    def _success(self):
+        """ Returns true if we have just reached a reward """
+        return np.linalg.norm(self.joint_locs[1] - self.reward_loc) <= 0.25
 
     def _get_info(self):
         """ Returns a dictionary with information about the current state. """
-        return {}
+        return {"is_success": self._success(),
+                "joint_angs" : self.arm_angles,
+                "joint_locs" : self.joint_locs,
+                "reward_loc" : self.reward_loc}
 
     def update_arm_angles(self, delta_angles):
         """ Adds delta_angles (2,) to self.arm_angles and wraps to [-pi, pi] """
@@ -93,13 +98,14 @@ class Discrete2DoF(gym.Env):
         #TODO: This should pull directly from robot simulation in ROS.
         t1, t2 = self.arm_angles[0], self.arm_angles[1]
         l1, l2 = self.link_lengths[0], self.link_lengths[1]
+        end_effector_location = self.calculate_end_effector_location(t1, t2)
         self.joint_locs = np.array(
                 [[l1 * np.cos(t1), l1 * np.sin(t1)],
                  end_effector_location])
 
     def update_reward(self):
         """ Updates reward based on distance to target. """
-        self.reward = 1. / (1E-6 + np.linalg.norm(self.joint_locs[1] -
+        self.reward = -(np.linalg.norm(self.joint_locs[1] -
                 self.reward_loc))
 
     def reset(self, seed=None, return_info=False, options=None):
@@ -135,7 +141,7 @@ class Discrete2DoF(gym.Env):
         self.update_reward()
 
         # Epsiode is done if we have reached the target.
-        done = np.linalg.norm(self.joint_locs[1] - self.reward_loc) <= 0.25
+        done = self._success()
         reward = self.reward
         observation = self._get_obs()
         info = self._get_info()
