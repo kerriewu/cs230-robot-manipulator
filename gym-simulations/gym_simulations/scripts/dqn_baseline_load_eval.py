@@ -26,7 +26,7 @@ if __name__ == '__main__':
 
     print('loading...')
     # Instantiate the agent
-    model = DQN.load(BASE_PATH + 'sim_outputs/models/dqn_default_2dof_arm_try2')
+    model = DQN.load(BASE_PATH + 'sim_outputs/models/dqn_default_2dof_arm_try3')
     # Evaluate the agent
     print('evaluating...')
     n_episodes = 10

@@ -85,6 +85,13 @@ class Discrete2DoF(gym.Env):
         a = self.arm_angles + delta_angles
         self.arm_angles = np.array([(x + np.pi) % (2*np.pi) - np.pi for x in a])
 
+    def calculate_end_effector_location(self, t1, t2):
+        l1, l2 = self.link_lengths[0], self.link_lengths[1]
+        end_effector_location = np.array([
+                    l1 * np.cos(t1) + l2 * np.cos(t1 + t2),
+                    l1 * np.sin(t1) + l2 * np.sin(t1 + t2)])
+        return end_effector_location
+
     def update_joint_locs(self):
         """ Returns x, y locations of the 2 joints (2, 2). """
         #TODO: This should pull directly from robot simulation in ROS.
@@ -92,10 +99,8 @@ class Discrete2DoF(gym.Env):
         l1, l2 = self.link_lengths[0], self.link_lengths[1]
         end_effector_location = self.calculate_end_effector_location(t1, t2)
         self.joint_locs = np.array(
-                [[l1 * np.cos(t1),
-                      l1 * np.sin(t1)],
-                 [l1 * np.cos(t1) + l2 * np.cos(t1 + t2),
-                      l1 * np.sin(t1) + l2 * np.sin(t1 + t2)]])
+                [[l1 * np.cos(t1), l1 * np.sin(t1)],
+                end_effector_location])
 
     def update_reward(self):
         """ Updates reward based on distance to target. """
@@ -107,9 +112,11 @@ class Discrete2DoF(gym.Env):
 
         # We need the following line to seed self.np_random
         ##super().reset(seed=seed)
+        t1 = np.random.uniform(low=0.0, high=2*np.pi)
+        t2 = np.random.uniform(low=0.0, high=2*np.pi)
 
         # Reset reward location
-        self.reward_loc = np.array([5., 8.])  # TODO randomize
+        self.reward_loc = self.calculate_end_effector_location(t1, t2)
 
         observation = self._get_obs()
         info = self._get_info()
