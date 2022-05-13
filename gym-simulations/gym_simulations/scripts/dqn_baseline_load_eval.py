@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # Code adapted from examples on
-# https://stable-baselines3.readthedocs.io/en/master/modules/dqn.html
+# https://colab.research.google.com/github/Stable-Baselines-Team/rl-colab-notebooks/blob/master/monitor_training.ipynb?authuser=2#scrollTo=BIedd7Pz9sOs
 
 from pathlib import Path
 import sys

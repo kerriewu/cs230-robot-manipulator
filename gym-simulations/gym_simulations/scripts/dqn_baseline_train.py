@@ -9,10 +9,12 @@ path_root = Path(__file__).parents[2]
 sys.path.append(str(path_root))
 print(sys.path)
 
+import os
 import gym
 from stable_baselines3 import DQN
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.callbacks import CallbackList, EvalCallback, StopTrainingOnRewardThreshold
+from stable_baselines3.common.monitor import Monitor
 
 from gym_simulations.envs.discrete_2dof import Discrete2DoF
 
@@ -28,14 +30,17 @@ if __name__ == '__main__':
     BASE_PATH='cs230-robot-manipulator/gym-simulations/gym_simulations/'
 
     # Create environment
+    log_dir = BASE_PATH+'sim_outputs/dqn_default_2dof_arm_try4_logs/'
+    os.makedirs(log_dir, exist_ok=True)
     env = gym.make('Discrete2DoF-v0')
     eval_env = gym.make('Discrete2DoF-v0')
+    env = Monitor(env, log_dir)
 
     callback_on_best = StopTrainingOnRewardThreshold(reward_threshold=-1000, verbose=1)
     eval_callback = EvalCallback(
          eval_env,
-         best_model_save_path=BASE_PATH+'sim_outputs/dqn_default_2dof_arm_try4_logs/',
-         log_path=BASE_PATH+'sim_outputs/dqn_default_2dof_arm_try4_logs/',
+         best_model_save_path=log_dir,
+         log_path=log_dir,
          eval_freq=1e5,
          deterministic=True,
          render=False,
