@@ -1,7 +1,13 @@
 #!/usr/bin/env python
 
-# Code adapted from examples on
+# Code adapted from examples on Stable Baselines3 docs
 # https://stable-baselines3.readthedocs.io/en/master/modules/dqn.html
+
+# Reference: A. Raffin, A. Hill, A. Gleave, A. Kanervisto, M. Ernestus,
+# N. Dormann. Stable Baselines3: Reliable Reinforcement Learning
+# Implementations. In:Journal of Machine Learning Research 22(268), 1-8 (2015).
+# http://jmlr.org/papers/v22/20-1364.html.
+
 
 from pathlib import Path
 import sys

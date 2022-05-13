@@ -2,6 +2,12 @@
 
 # Code copied from example:
 # https://colab.research.google.com/github/Stable-Baselines-Team/rl-colab-notebooks/blob/sb3/monitor_training.ipynb#scrollTo=gWskDE2c9WoN
+
+# Reference: A. Raffin, A. Hill, A. Gleave, A. Kanervisto, M. Ernestus,
+# N. Dormann. Stable Baselines3: Reliable Reinforcement Learning
+# Implementations. In:Journal of Machine Learning Research 22(268), 1-8 (2015).
+# http://jmlr.org/papers/v22/20-1364.html.
+
 from pathlib import Path
 import sys
 path_root = Path(__file__).parents[2]
