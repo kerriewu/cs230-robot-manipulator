@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+
+# Code adapted from examples on
+# https://stable-baselines3.readthedocs.io/en/master/modules/dqn.html
+
 from pathlib import Path
 import sys
 path_root = Path(__file__).parents[2]
@@ -30,8 +34,8 @@ if __name__ == '__main__':
     callback_on_best = StopTrainingOnRewardThreshold(reward_threshold=-1000, verbose=1)
     eval_callback = EvalCallback(
          eval_env,
-         best_model_save_path=BASE_PATH+'sim_outputs/dqn_default_2dof_arm_try3_logs/',
-         log_path=BASE_PATH+'sim_outputs/dqn_default_2dof_arm_try3_logs/',
+         best_model_save_path=BASE_PATH+'sim_outputs/dqn_default_2dof_arm_try4_logs/',
+         log_path=BASE_PATH+'sim_outputs/dqn_default_2dof_arm_try4_logs/',
          eval_freq=1e5,
          deterministic=True,
          render=False,
@@ -50,7 +54,7 @@ if __name__ == '__main__':
     model.learn(total_timesteps=int(1e6), callback=eval_callback)
     print('trained for some timesteps')
     print('saving')
-    model.save(BASE_PATH + 'sim_outputs/models/dqn_default_2dof_arm_try3')
+    model.save(BASE_PATH + 'sim_outputs/models/dqn_default_2dof_arm_try4')
     # Evaluate the agent
     print('evaluating...')
     mean_reward, std_reward = evaluate_policy(model, eval_env,

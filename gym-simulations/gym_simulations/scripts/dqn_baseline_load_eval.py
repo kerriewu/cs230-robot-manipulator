@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+
+# Code adapted from examples on
+# https://stable-baselines3.readthedocs.io/en/master/modules/dqn.html
+
 from pathlib import Path
 import sys
 path_root = Path(__file__).parents[2]
@@ -34,7 +38,7 @@ if __name__ == '__main__':
                                                 n_eval_episodes=n_episodes)
     print("[Mean reward over last {} eval episodes is {}".format(n_episodes,
                                                                 mean_reward))
-                                                                
+
     obs = env.reset()
     while True:
         action, _states = model.predict(obs, deterministic=True)
