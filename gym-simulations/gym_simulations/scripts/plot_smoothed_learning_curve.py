@@ -40,7 +40,7 @@ def plot_results(log_folder, title='Learning Curve'):
     fig = plt.figure(title)
     plt.plot(x, y)
     plt.xlabel('Number of Timesteps')
-    plt.ylabel('Rewards')
+    plt.ylabel('Summed rewards per episode')
     plt.title(title + " Smoothed")
     plt.show()
 

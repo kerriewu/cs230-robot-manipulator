@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # Code adapted from examples on
-# https://colab.research.google.com/github/Stable-Baselines-Team/rl-colab-notebooks/blob/master/monitor_training.ipynb?authuser=2#scrollTo=BIedd7Pz9sOs
+# https://stable-baselines3.readthedocs.io/en/master/modules/dqn.html
 
 from pathlib import Path
 import sys
@@ -12,6 +12,7 @@ print(sys.path)
 import gym
 from stable_baselines3 import DQN
 from stable_baselines3.common.evaluation import evaluate_policy
+import numpy as np
 
 from gym_simulations.envs.discrete_2dof import Discrete2DoF
 
@@ -25,19 +26,42 @@ if __name__ == '__main__':
         reward_threshold=-1000.0,
     )
 
+
     # Create environment
     env = gym.make('Discrete2DoF-v0')
+    random_env = gym.make('Discrete2DoF-v0')
+    n_episodes = 100
 
     print('loading...')
-    # Instantiate the agent
-    model = DQN.load(BASE_PATH + 'sim_outputs/models/dqn_default_2dof_arm_try3')
+    # Instantiate a random baseline
+    random_model = DQN('MlpPolicy', random_env)
+    print('evaluating random model')
+    rewards, lengths = evaluate_policy(random_model, random_env,
+                                                n_eval_episodes=n_episodes,
+                                                return_episode_rewards=True)
+    rewards = np.array(rewards)
+    lengths = np.array(lengths)
+    num_successes = np.sum(np.array(lengths < 4000))
+    avg_reward = np.mean(rewards)
+    print("[Mean reward for random baseline over last {} eval episodes is {},"
+          " number of successes is {}".format(n_episodes,
+                                              avg_reward,
+                                              num_successes))
+
+    # Instantiate the trained agent
+    model = DQN.load(BASE_PATH + 'sim_outputs/models/dqn_default_2dof_arm_try4')
     # Evaluate the agent
     print('evaluating...')
-    n_episodes = 10
-    mean_reward, std_reward = evaluate_policy(model, env,
-                                                n_eval_episodes=n_episodes)
-    print("[Mean reward over last {} eval episodes is {}".format(n_episodes,
-                                                                mean_reward))
+    rewards, lengths = evaluate_policy(model, env, n_eval_episodes=n_episodes,
+                                                return_episode_rewards=True)
+    rewards = np.array(rewards)
+    lengths = np.array(lengths)
+    num_successes = np.sum(np.array(lengths < 4000))
+    avg_reward = np.mean(rewards)
+    print("[Mean reward for trained baseline over last {} eval episodes is {},"
+          " number of successes is {}".format(n_episodes,
+                                              avg_reward,
+                                              num_successes))
 
     obs = env.reset()
     while True:
