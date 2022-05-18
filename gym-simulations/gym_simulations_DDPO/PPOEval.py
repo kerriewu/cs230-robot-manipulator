@@ -3,8 +3,8 @@ from Arm_env import ArmEnv
 if __name__ == "__main__":
     env = ArmEnv()
     o = env.reset()
-    sys.path.append('./multi_processing_ppo')
-    from PPO.multi_processing_ppo.PPOModel import *
+    sys.path.append('./multi_processing')
+    from multi_processing.PPOModel import *
     net = GlobalNet(env.state_dim,env.action_dim)
     net.act.load_state_dict(torch.load('./trained_models/act.pkl'))
     while 1:
