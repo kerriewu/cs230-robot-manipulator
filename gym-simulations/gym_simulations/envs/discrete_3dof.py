@@ -131,8 +131,7 @@ class Discrete3DoF(gym.Env):
         self.reward_loc = self.calculate_joint_locs(angles)[-2]
 
         # Reset arm location
-        self.arm_angles = np.array([np.random.uniform(low=0.0, high=2*np.pi),
-                                    np.random.uniform(low=0.0, high=2*np.pi)])
+        self.arm_angles = np.random.uniform(low=0.0, high=2*np.pi, size=3)
         
         # Update environment
         self.update_joint_locs()
