@@ -121,9 +121,18 @@ class Box3DoF(gym.Env):
         angles = np.random.uniform(low=0.0, high=2*np.pi, size=3)
         self.reward_loc = self.calculate_joint_locs(angles)[-2]
 
+        # Reset arm location
+        self.arm_angles = np.array([np.random.uniform(low=0.0, high=2*np.pi),
+                                    np.random.uniform(low=0.0, high=2*np.pi)])
+        
+        # Update environment
+        self.update_joint_locs()
+        self.update_reward()
+
         observation = self._get_obs()
         info = self._get_info()
         return (observation, info) if return_info else observation
+        
 
     def step(self, action):
         """ Applies one step in the simulation.

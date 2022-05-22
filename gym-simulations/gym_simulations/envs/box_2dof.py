@@ -104,22 +104,30 @@ class Box2DoF(gym.Env):
         """ Updates reward based on distance to target. """
         self.reward = -(np.linalg.norm(self.joint_locs[1] -
                 self.reward_loc))
-
+        
     def reset(self, seed=None, return_info=False, options=None):
         """ Resets simulation environment. See gym.env.reset(). """
 
         # We need the following line to seed self.np_random
         ##super().reset(seed=seed)
+        
+        # Reset reward location
         t1 = np.random.uniform(low=0.0, high=2*np.pi)
         t2 = np.random.uniform(low=0.0, high=2*np.pi)
-
-        # Reset reward location
         self.reward_loc = self.calculate_end_effector_location(t1, t2)
-
+        
+        # Reset arm location
+        self.arm_angles = np.array([np.random.uniform(low=0.0, high=2*np.pi),
+                                    np.random.uniform(low=0.0, high=2*np.pi)])
+        
+        # Update environment
+        self.update_joint_locs()
+        self.update_reward()
+        
         observation = self._get_obs()
         info = self._get_info()
         return (observation, info) if return_info else observation
-
+        
     def step(self, action):
         """ Applies one step in the simulation.
 
