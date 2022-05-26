@@ -157,9 +157,9 @@ class PassingGame(ParallelEnv):
                         np.array([token.location for token in
                                     self.tokens[agent_index-1]]).flatten()
                         ))
-        print(agent_index)
-        print(state.shape)
-        print(state)
+        # print(agent_index)
+        # print(state.shape)
+        # print(state)
 
         return np.array(state).reshape(74,)
 
