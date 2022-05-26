@@ -26,7 +26,8 @@ class PassingGame(ParallelEnv):
     metadata = {"render_modes" : ["human", "rgb_array"], "render_fps" : 300}
 
     def __init__(self,
-                 angle_deltas=[.01745, .01745, .01745, .01745]):
+                 angle_deltas=[.01745, .01745, .01745, .01745],
+                 max_episode_steps = 10000):
         """
         Creates a new environment for 2 4DOF arms in a 3D space for a game.
 
@@ -49,6 +50,7 @@ class PassingGame(ParallelEnv):
 
         Args:
             angle_deltas: the change in angle for each action.
+            max_episode_steps: the max number of timesteps per episode.
         """
 
         # Two possible arms / agents, which are each identical
@@ -88,7 +90,7 @@ class PassingGame(ParallelEnv):
                 9: np.zeros((4,)),
         }
 
-        self.max_episode_steps=10000.0 # Limit max number of timesteps
+        self.max_episode_steps = max_episode_steps # Limit max number of timesteps
 
         self.reset()
 
