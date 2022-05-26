@@ -254,6 +254,7 @@ class PassingGame(ParallelEnv):
                 if token:
                     if self.is_token_at_bin(token):
                         reward[self.agents[i]] = 100
+                        reward[self.agents[i-1]] = 100
 
         self.current_steps += 1
         env_done = self.current_steps > self.max_episode_steps
