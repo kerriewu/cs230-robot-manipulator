@@ -1,6 +1,7 @@
 class Token():
     """
-    A Token object.
+    A Token object for use in passing_game.py.
+    
     Attributes:
         state: "dropped" or "held" by an arm
         arm_id: Determines which bin it should be dropped in for a reward.

@@ -1,3 +1,4 @@
+# from gym_simulations.envs.game_token import Token
 from game_token import Token
 import numpy as np
 
@@ -5,7 +6,14 @@ class Arm():
     """
     A 4DOF arm object.
 
-    TODO(kerwu) add more docs.
+    Implements a 4DOF, 3-link arm for use in passing_game.py in a 3D space.
+    The 4 degrees of freedom are:
+        0: base rotation
+        1: first arm link angle
+        2: second arm link angle
+        3: third arm link angle
+    The end effector is located at the end of the third link. The arm can hold
+    and drop Tokens (defined in game_token.py).
     """
 
     def __init__(self, link_lengths, origin):
