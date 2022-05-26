@@ -16,10 +16,10 @@ from pettingzoo.utils import wrappers
 from pettingzoo.utils import parallel_to_aec
 from pettingzoo.utils import parallel_to_aec
 from pettingzoo.test import api_test, parallel_api_test, test_save_obs
-# from gym_simulations.envs.game_token import Token
-# from gym_simulations.envs.arm import Arm
-from game_token import Token
-from arm import Arm
+from gym_simulations.envs.game_token import Token
+from gym_simulations.envs.arm import Arm
+# from game_token import Token
+# from arm import Arm
 
 
 class PassingGame(ParallelEnv):
@@ -87,6 +87,8 @@ class PassingGame(ParallelEnv):
                 8: np.zeros((4,)),
                 9: np.zeros((4,)),
         }
+
+        self.max_episode_steps=10000.0 # Limit max number of timesteps
 
         self.reset()
 
@@ -157,9 +159,6 @@ class PassingGame(ParallelEnv):
                         np.array([token.location for token in
                                     self.tokens[agent_index-1]]).flatten()
                         ))
-        # print(agent_index)
-        # print(state.shape)
-        # print(state)
 
         return np.array(state).reshape(74,)
 
@@ -193,10 +192,13 @@ class PassingGame(ParallelEnv):
                 for i in range(self.num_tokens_per_arm)]
             ]
 
-        observation = {self.agents[i]: self._get_obs(i)
-                        for i in range(len(self.agents))}
-        info = {self.agents[i]: self._get_info(i)
-                    for i in range(len(self.agents))}
+        observation = {self.agents[0]: self._get_obs(0),
+                       self.agents[1]: self._get_obs(1)}
+        info = {self.agents[0]: self._get_info(0),
+                self.agents[1]: self._get_info(1)}
+
+        self.current_steps = 0
+
         return (observation, info) if return_info else observation
 
     def step(self, actions):
@@ -251,8 +253,11 @@ class PassingGame(ParallelEnv):
                     if self.is_token_at_bin(token):
                         reward[self.agents[i]] = 100
 
-        done = {self.agents[0]: self._success(),
-                self.agents[1]: self._success()}
+        self.current_steps += 1
+        env_done = self.current_steps > self.max_episode_steps
+
+        done = {self.agents[0]: self._success() or env_done,
+                self.agents[1]: self._success() or env_done}
         observation = {self.agents[0]: self._get_obs(0),
                        self.agents[1]: self._get_obs(1)}
         info = {self.agents[0]: self._get_info(0),

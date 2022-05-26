@@ -1,5 +1,5 @@
-# from gym_simulations.envs.game_token import Token
-from game_token import Token
+from gym_simulations.envs.game_token import Token
+# from game_token import Token
 import numpy as np
 
 class Arm():
