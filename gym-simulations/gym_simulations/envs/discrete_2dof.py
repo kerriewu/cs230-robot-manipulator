@@ -147,7 +147,7 @@ class Discrete2DoF(gym.Env):
             done (bool): Whether simulation has terminated (i.e. reward reached)
             info (dict): Auxiliary information about environment
         """
-        self.update_arm_angles(self._action_to_direction[action])
+        self.update_arm_angles(self._action_to_direction[int(action)])
         self.update_joint_locs()
         self.update_reward()
 
