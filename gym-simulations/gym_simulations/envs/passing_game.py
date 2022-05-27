@@ -16,10 +16,11 @@ from pettingzoo.utils import wrappers
 from pettingzoo.utils import parallel_to_aec
 from pettingzoo.utils import parallel_to_aec
 from pettingzoo.test import api_test, parallel_api_test, test_save_obs
-from gym_simulations.envs.game_token import Token
-from gym_simulations.envs.arm import Arm
-# from game_token import Token
-# from arm import Arm
+# from gym_simulations.envs.game_token import Token
+# from gym_simulations.envs.arm import Arm
+from game_token import Token
+from arm import Arm
+import time
 
 
 class PassingGame(ParallelEnv):
@@ -63,15 +64,15 @@ class PassingGame(ParallelEnv):
         self.angle_deltas = np.array(angle_deltas)
 
         # Location for each arm's tokens to be dropped at for reward.
-        self.bin_locations = [np.array([20.0, 0.0, 0.0]),
-                              np.array([-20.0, 0.0, 0.0])]
+        self.bin_locations = [np.array([1.3, 0.0, 0.0]),
+                              np.array([-1.3, 0.0, 0.0])]
 
         # Drop tokens this close to the bin location for reward
-        self.bin_radius = 1.0
+        self.bin_radius = 0.25
 
         # Where each token is picked up
-        self.token_entry_locations = [np.array([-16.0, +8.0, 0.0]),
-                                      np.array([+16.0, -8.0, 0.0])]
+        self.token_entry_locations = [np.array([-1.0, +0.5, 0.0]),
+                                      np.array([+1.0, -0.5, 0.0])]
 
         # Number of tokens to hand to bin before completing the game
         self.num_tokens_per_arm = 5
@@ -91,7 +92,11 @@ class PassingGame(ParallelEnv):
         }
 
         self.max_episode_steps = max_episode_steps # Limit max number of timesteps
-
+        
+        # Visualization 
+        self.swift_backend = None
+        self.rtb_robot = None  # World with two arms and tokens
+        
         self.reset()
 
     """ See _get_obs for documentation on observations."""
@@ -182,10 +187,10 @@ class PassingGame(ParallelEnv):
         self.agents = self.possible_agents[:]
 
         # Reset Arms and Tokens
-        self.arms = [Arm(link_lengths=[6., 4., 2.5],
-                         origin=[-10.0, 0.0, 0.0]),
-                     Arm(link_lengths=[6., 4., 2.5],
-                         origin=[10.0, 0.0, 0.0])]
+        self.arms = [Arm(link_lengths=[.327, .393, .139],
+                         origin=[-.65, 0.0, 0.333]),
+                     Arm(link_lengths=[.327, .393, .139],
+                         origin=[.65, 0.0, 0.333])]
 
         self.tokens = [
             [Token(self.token_entry_locations[0], 0)
@@ -269,15 +274,105 @@ class PassingGame(ParallelEnv):
 
     def render(self, mode="human"):
         """ Renders simulation for viewing. """
-        pass
+        
+        # Import robotics toolbox
+        import roboticstoolbox as rtb
+        from roboticstoolbox.backends.swift import Swift  # 3D visualizer
+        from two_panda_world import TwoPandaWorld
+        
+        # On initial startup
+        if self.swift_backend is None:
+            # Setup robot world
+            self.rtb_robot = TwoPandaWorld()
+            # Visualizer
+            self.swift_backend = Swift()
+            self.swift_backend.launch()             # activate it
+            self.swift_backend.add(self.rtb_robot)  # add robot to the 3D scene
+            self.swift_backend.set_camera_pose([2.5, 2.5, 2.5], [-1, -1, -1])
+            
+        # Update Joint Angles 
+        ang_signs = np.array([1, -1, 1, -1])  # env/panda mapping
+        ang_offsets = np.array([0., -.27, -.48, 3.00])
+        # Robot 0
+        r0_render_angles = self.arms[0].angles * ang_signs + ang_offsets
+        self.rtb_robot.q[0]  = r0_render_angles[0]
+        self.rtb_robot.q[1]  = r0_render_angles[1]
+        self.rtb_robot.q[3]  = r0_render_angles[2]
+        self.rtb_robot.q[5]  = r0_render_angles[3]
+        # Robot 1
+        r1_render_angles = self.arms[1].angles * ang_signs + ang_offsets
+        self.rtb_robot.q[9]  = r1_render_angles[0]
+        self.rtb_robot.q[10] = r1_render_angles[1]
+        self.rtb_robot.q[12] = r1_render_angles[2]
+        self.rtb_robot.q[14] = r1_render_angles[3]
+        
+        # Update grippers
+        # Robot 0
+        if self.arms[0].held_token is None:
+            self.rtb_robot.q[7] = 100
+            self.rtb_robot.q[8] = 100
+        else:
+            self.rtb_robot.q[7] = 0
+            self.rtb_robot.q[8] = 0
+        # Robot 1
+        if self.arms[1].held_token is None:
+            self.rtb_robot.q[16] = 100
+            self.rtb_robot.q[17] = 100
+        else:
+            self.rtb_robot.q[16] = 0
+            self.rtb_robot.q[17] = 0
+            
+        # Update tokens
+        # Tokens 0 (blue)
+        for i, token in enumerate(self.tokens[0]):
+            self.rtb_robot.links[25+i].ets = rtb.ETS([
+                rtb.ET.tx(token.location[0]),
+                rtb.ET.ty(token.location[1]),
+                rtb.ET.tz(token.location[2])
+            ])    
+        # Tokens 1 (red)
+        for i, token in enumerate(self.tokens[1]):
+            self.rtb_robot.links[30+i].ets = rtb.ETS([
+                rtb.ET.tx(token.location[0]),
+                rtb.ET.ty(token.location[1]),
+                rtb.ET.tz(token.location[2])
+            ])
+            
+        # Update bins
+        # Bin 0 (blue)
+        self.rtb_robot.links[35].ets = rtb.ETS([
+                rtb.ET.tx(self.bin_locations[0][0]),
+                rtb.ET.ty(self.bin_locations[0][1]),
+                rtb.ET.tz(self.bin_locations[0][2])
+        ])
+        # Bin 1 (red)
+        self.rtb_robot.links[36].ets = rtb.ETS([
+                rtb.ET.tx(self.bin_locations[1][0]),
+                rtb.ET.ty(self.bin_locations[1][1]),
+                rtb.ET.tz(self.bin_locations[1][2])
+        ])
+        
+        # Update render
+        self.swift_backend.step()
 
     def close(self):
         """ Closes any open resources used by the environment. """
-        pass
+        self.swift_backend.close()
 
 if __name__ == '__main__':
     env = PassingGame()
     env.reset()
-    env.step({agent: 5 for agent in env.agents})
-    env.step({agent: 2 for agent in env.agents})
-    parallel_api_test(env)
+    env.render()
+    # env.step({agent: 5 for agent in env.agents})
+    # env.step({agent: 2 for agent in env.agents})
+    # parallel_api_test(env)
+    for i in range(10000):
+        env.step({
+                "arm_0": np.random.choice(np.arange(10)),
+                "arm_1": np.random.choice(np.arange(10))
+        })
+        print(env.arms[0].angles)
+        print(env.arms[1].angles)
+        print("--")
+        env.render()
+    time.sleep(10000)
