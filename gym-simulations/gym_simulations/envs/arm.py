@@ -45,6 +45,7 @@ class Arm():
             self.joint_locs = new_joint_locs
         if self.held_token:
             self.held_token.update_location(self.joint_locs[-1])
+            # print(self.held_token.location)
 
     def calculate_joint_locs(self, angles):
         """ Returns a list of the location of each joint.
@@ -60,9 +61,9 @@ class Arm():
         base_angle = angles[0]
         for angle, length in zip(np.cumsum(angles[1:]), self.link_lengths):
             joint_locs.append(joint_locs[-1] +
-                    length * np.array([np.cos(angle) * np.cos(base_angle),
-                                       np.cos(angle) * np.sin(base_angle),
-                                       np.sin(angle)]))
+                    length * np.array([np.sin(angle) * np.cos(base_angle),
+                                       np.sin(angle) * np.sin(base_angle),
+                                       np.cos(angle)]))
 
         # Add to origin location
         joint_locs += self.origin
@@ -76,6 +77,8 @@ class Arm():
         assert np.linalg.norm(self.joint_locs[-1] - token.location) <= 0.25
         self.held_token = token
         token.set_state('held')
+        # print("picked up token")
+        # print(token.location)
 
     def drop_token(self):
         """ Drop token if possible
@@ -85,5 +88,7 @@ class Arm():
             token = self.held_token
             self.held_token.set_state('dropped')
             self.held_token = None
+            # print("dropped token")
+            # print(token.location)
             return token
         return None
