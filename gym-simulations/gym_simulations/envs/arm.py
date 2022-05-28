@@ -25,6 +25,7 @@ class Arm():
         # Indices:
         #   0: base rotation
         #   1-3: arm link angles
+        # initial = everything in a straight line going up.
         self.angles = np.array([0.0, 0.0, 0.0, 0.0])
         self.update_angles_and_joint_locs(np.zeros(4,))
 
