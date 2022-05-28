@@ -321,15 +321,9 @@ class PassingGame(ParallelEnv):
             self.swift_backend.launch()             # activate it
             self.swift_backend.add(self.rtb_robot)  # add robot to the 3D scene
             self.swift_backend.set_camera_pose([2.5, 2.5, 2.5], [-1, -1, -1])
-<<<<<<< HEAD
             
         # Update Joint Angles 
         ang_signs = np.array([1, -1, 1, 1])  # env/panda mapping
-=======
-
-        # Update Joint Angles
-        ang_signs = np.array([1, -1, 1, -1])  # env/panda mapping
->>>>>>> ae3b5a7ee3974fd65cd184ef4dc924906544a2ef
         ang_offsets = np.array([0., -.27, -.48, 3.00])
         # Robot 0
         r0_render_angles = self.arms[0].angles * ang_signs + ang_offsets
