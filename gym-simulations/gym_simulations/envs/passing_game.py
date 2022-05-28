@@ -291,7 +291,7 @@ class PassingGame(ParallelEnv):
             self.swift_backend.set_camera_pose([2.5, 2.5, 2.5], [-1, -1, -1])
             
         # Update Joint Angles 
-        ang_signs = np.array([1, -1, 1, -1])  # env/panda mapping
+        ang_signs = np.array([1, -1, 1, 1])  # env/panda mapping
         ang_offsets = np.array([0., -.27, -.48, 3.00])
         # Robot 0
         r0_render_angles = self.arms[0].angles * ang_signs + ang_offsets
@@ -368,11 +368,26 @@ if __name__ == '__main__':
     # parallel_api_test(env)
     for i in range(10000):
         env.step({
-                "arm_0": np.random.choice(np.arange(10)),
-                "arm_1": np.random.choice(np.arange(10))
+                 "arm_0": np.random.choice(np.arange(10)),
+                 "arm_1": np.random.choice(np.arange(10))
         })
         print(env.arms[0].angles)
         print(env.arms[1].angles)
         print("--")
         env.render()
+        # try:
+            # a = int(input("* input an action 0-9 to control robot 0 *"))
+            # env.step({
+                    # "arm_0": a,
+                    # "arm_1": 8
+            # })
+            # print("-----------------------")
+            # # print(env.arms[0].angles)
+            # # print(env.arms[1].angles)
+            # print("--")
+            # print(env.arms[0].joint_locs)
+            # # print(env.arms[1].joint_locs)
+            # env.render()
+        # except:
+            # continue
     time.sleep(10000)

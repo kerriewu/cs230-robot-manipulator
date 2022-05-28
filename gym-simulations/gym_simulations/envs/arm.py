@@ -1,5 +1,5 @@
-from gym_simulations.envs.game_token import Token
-# from game_token import Token
+# from gym_simulations.envs.game_token import Token
+from game_token import Token
 import numpy as np
 
 class Arm():
@@ -57,16 +57,23 @@ class Arm():
         Returns:
             joint_locs: List of shape (3,) np arrays; x,y,z coords for each joint.
         """
-        joint_locs = [np.zeros(3)]  # Include origin for now; won't be returned
+        joint_locs = np.zeros((1,3))  # Include origin for now; won't return
         base_angle = angles[0]
         for angle, length in zip(np.cumsum(angles[1:]), self.link_lengths):
-            joint_locs.append(joint_locs[-1] +
-                    length * np.array([np.sin(angle) * np.cos(base_angle),
-                                       np.sin(angle) * np.sin(base_angle),
-                                       np.cos(angle)]))
+            joint_locs = np.vstack([joint_locs, joint_locs[-1] +
+                    length * np.array([np.cos(angle), 0, np.sin(angle)])])
+        # Rotate the whole -90 degrees about Y
+        R1 = np.array([[ np.cos(-np.pi/2), 0, np.sin(-np.pi/2)],
+                       [                0, 1,                0],
+                       [-np.sin(-np.pi/2), 0, np.cos(-np.pi/2)]])                
+        # Rotate by base angle
+        R2 = np.array([[np.cos(base_angle), -np.sin(base_angle), 0],
+                      [np.sin(base_angle),  np.cos(base_angle), 0],
+                      [                 0,                   0, 1]])
+        joint_locs = (R2 @ R1 @ joint_locs.T).T  # matrix multiply each column
 
         # Add to origin location
-        joint_locs += self.origin
+        joint_locs += [self.origin]  # Adds origin to each row of joint_locs
 
         return joint_locs[1:]  # omit origin
 
@@ -92,3 +99,12 @@ class Arm():
             # print(token.location)
             return token
         return None
+        
+if __name__ == '__main__':
+    # joint locs calculation test 
+    link_lengths = [1, 2, 3]
+    origin = np.array([10, 10, 100])
+    a = Arm(link_lengths, origin)
+    angles = [0, np.pi/2, 0, 0]
+    print(a.calculate_joint_locs(angles))
+    
