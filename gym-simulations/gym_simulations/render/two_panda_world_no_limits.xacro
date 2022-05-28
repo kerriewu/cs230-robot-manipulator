@@ -3,7 +3,7 @@
   <xacro:arg name="arm_id_1" default="panda_0" />
   <xacro:arg name="arm_id_2" default="panda_1" />
 
-  <xacro:include filename="$(find franka_description)/robots/panda_arm.xacro"/>
+  <xacro:include filename="$(find franka_description)/robots/panda_arm_no_limits.xacro"/>
   <xacro:include filename="$(find franka_description)/robots/hand.xacro"/>
 
   <!-- box shaped table as base for the 2 Pandas -->
@@ -14,7 +14,7 @@
         <cylinder length=".2" radius="2."/>
       </geometry>
       <material name="Tan">
-        <color rgba=".7 .7 .4 1.0"/>
+        <color rgba=".4 .9 .4 1.0"/>
       </material>
     </visual>
     <collision>
@@ -39,10 +39,10 @@
     <visual>
       <origin xyz="0 0 0." rpy="0 0 0"/>
       <geometry>
-        <cylinder length=".015" radius=".04"/>
+        <cylinder length=".03" radius=".04"/>
       </geometry>
       <material name="blue">
-        <color rgba=".2 .6 .9 1.0"/>
+        <color rgba=".15 .5 .7 1.0"/>
       </material>
     </visual>
   </link>
@@ -55,10 +55,10 @@
     <visual>
       <origin xyz="0 0 0." rpy="0 0 0"/>
       <geometry>
-        <cylinder length=".015" radius=".04"/>
+        <cylinder length=".03" radius=".04"/>
       </geometry>
       <material name="blue">
-        <color rgba=".2 .6 .9 1.0"/>
+        <color rgba=".15 .5 .7 1.0"/>
       </material>
     </visual>
   </link>
@@ -71,10 +71,10 @@
     <visual>
       <origin xyz="0 0 0." rpy="0 0 0"/>
       <geometry>
-        <cylinder length=".015" radius=".04"/>
+        <cylinder length=".03" radius=".04"/>
       </geometry>
       <material name="blue">
-        <color rgba=".2 .6 .9 1.0"/>
+        <color rgba=".15 .5 .7 1.0"/>
       </material>
     </visual>
   </link>
@@ -87,10 +87,10 @@
     <visual>
       <origin xyz="0 0 0." rpy="0 0 0"/>
       <geometry>
-        <cylinder length=".015" radius=".04"/>
+        <cylinder length=".03" radius=".04"/>
       </geometry>
       <material name="blue">
-        <color rgba=".2 .6 .9 1.0"/>
+        <color rgba=".15 .5 .7 1.0"/>
       </material>
     </visual>
   </link>
@@ -103,10 +103,10 @@
     <visual>
       <origin xyz="0 0 0." rpy="0 0 0"/>
       <geometry>
-        <cylinder length=".015" radius=".04"/>
+        <cylinder length=".03" radius=".04"/>
       </geometry>
       <material name="blue">
-        <color rgba=".2 .6 .9 1.0"/>
+        <color rgba=".15 .5 .7 1.0"/>
       </material>
     </visual>
   </link>
@@ -120,10 +120,10 @@
     <visual>
       <origin xyz="0 0 0." rpy="0 0 0"/>
       <geometry>
-        <cylinder length=".015" radius=".04"/>
+        <cylinder length=".03" radius=".04"/>
       </geometry>
       <material name="red">
-        <color rgba="1. .4 .1 1.0"/>
+        <color rgba=".7 .1 .1 1.0"/>
       </material>
     </visual>
   </link>
@@ -136,10 +136,10 @@
     <visual>
       <origin xyz="0 0 0." rpy="0 0 0"/>
       <geometry>
-        <cylinder length=".015" radius=".04"/>
+        <cylinder length=".03" radius=".04"/>
       </geometry>
       <material name="red">
-        <color rgba="1. .4 .1 1.0"/>
+        <color rgba=".7 .1 .1 1.0"/>
       </material>
     </visual>
   </link>
@@ -152,10 +152,10 @@
     <visual>
       <origin xyz="0 0 0." rpy="0 0 0"/>
       <geometry>
-        <cylinder length=".015" radius=".04"/>
+        <cylinder length=".03" radius=".04"/>
       </geometry>
       <material name="red">
-        <color rgba="1. .4 .1 1.0"/>
+        <color rgba=".7 .1 .1 1.0"/>
       </material>
     </visual>
   </link>
@@ -168,10 +168,10 @@
     <visual>
       <origin xyz="0 0 0." rpy="0 0 0"/>
       <geometry>
-        <cylinder length=".015" radius=".04"/>
+        <cylinder length=".03" radius=".04"/>
       </geometry>
       <material name="red">
-        <color rgba="1. .4 .1 1.0"/>
+        <color rgba=".7 .1 .1 1.0"/>
       </material>
     </visual>
   </link>
@@ -184,10 +184,10 @@
     <visual>
       <origin xyz="0 0 0." rpy="0 0 0"/>
       <geometry>
-        <cylinder length=".015" radius=".04"/>
+        <cylinder length=".03" radius=".04"/>
       </geometry>
       <material name="red">
-        <color rgba="1. .4 .1 1.0"/>
+        <color rgba=".7 .1 .1 1.0"/>
       </material>
     </visual>
   </link>
@@ -197,7 +197,40 @@
   </joint>
   
   
+  <!-- Bins -->
+  <!-- Blue -->
+  <link name="blue_bin">
+    <visual>
+      <origin xyz="0 0 0." rpy="0 0 0"/>
+      <geometry>
+        <cylinder length=".015" radius=".30"/>
+      </geometry>
+      <material name="light blue">
+        <color rgba="0.2 .5 1 1.0"/>
+      </material>
+    </visual>
+  </link>
+  <joint name="blue_bin_link" type="floating">
+    <parent link="base"/>
+    <child link="blue_bin"/>
+  </joint>
   
+  <!-- Red -->
+  <link name="red_bin">
+    <visual>
+      <origin xyz="0 0 0." rpy="0 0 0"/>
+      <geometry>
+        <cylinder length=".015" radius=".30"/>
+      </geometry>
+      <material name="light red">
+        <color rgba="1 .2 .3 1.0"/>
+      </material>
+    </visual>
+  </link>
+  <joint name="red_bin_link" type="floating">
+    <parent link="base"/>
+    <child link="red_bin"/>
+  </joint>
   
   
   
