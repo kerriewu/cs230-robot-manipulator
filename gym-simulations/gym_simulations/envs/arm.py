@@ -1,5 +1,5 @@
-# from gym_simulations.envs.game_token import Token
-from game_token import Token
+from gym_simulations.envs.game_token import Token
+# from game_token import Token
 import numpy as np
 
 class Arm():
@@ -66,7 +66,7 @@ class Arm():
         # Rotate the whole -90 degrees about Y
         R1 = np.array([[ np.cos(-np.pi/2), 0, np.sin(-np.pi/2)],
                        [                0, 1,                0],
-                       [-np.sin(-np.pi/2), 0, np.cos(-np.pi/2)]])                
+                       [-np.sin(-np.pi/2), 0, np.cos(-np.pi/2)]])
         # Rotate by base angle
         R2 = np.array([[np.cos(base_angle), -np.sin(base_angle), 0],
                       [np.sin(base_angle),  np.cos(base_angle), 0],
@@ -100,12 +100,11 @@ class Arm():
             # print(token.location)
             return token
         return None
-        
+
 if __name__ == '__main__':
-    # joint locs calculation test 
+    # joint locs calculation test
     link_lengths = [1, 2, 3]
     origin = np.array([10, 10, 100])
     a = Arm(link_lengths, origin)
     angles = [0, np.pi/2, 0, 0]
     print(a.calculate_joint_locs(angles))
-    

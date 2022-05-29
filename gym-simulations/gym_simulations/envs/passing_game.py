@@ -18,9 +18,16 @@ from pettingzoo.utils import parallel_to_aec
 from pettingzoo.test import api_test, parallel_api_test, test_save_obs
 from gym_simulations.envs.game_token import Token
 from gym_simulations.envs.arm import Arm
+from gym_simulations.envs.token_bin import Bin
 # from game_token import Token
 # from arm import Arm
 import time
+
+# Import robotics toolbox
+import roboticstoolbox as rtb
+from roboticstoolbox.backends.swift import Swift  # 3D visualizer
+# from two_panda_world import TwoPandaWorld
+from gym_simulations.envs.two_panda_world import TwoPandaWorld
 
 
 class PassingGame(ParallelEnv):
@@ -30,6 +37,7 @@ class PassingGame(ParallelEnv):
                  angle_deltas=[.01745, .01745, .01745, .01745],
                  max_episode_steps = 10000):
         """
+        TODO(kerwu): update description to match bin refactor.
         Creates a new environment for 2 4DOF arms in a 3D space for a game.
 
         The game setup is as follows:
@@ -45,7 +53,7 @@ class PassingGame(ParallelEnv):
         to the agent.
         Eg: Agent 0 corresponds to
                 self.arms[0]
-                self.bin_locations[0],
+                self.bins[0],
                 self.token_entry_locations[0],
                 self.tokens[0],
 
@@ -62,13 +70,6 @@ class PassingGame(ParallelEnv):
 
         # Angle deltas are the same for both arms.
         self.angle_deltas = np.array(angle_deltas)
-
-        # Location for each arm's tokens to be dropped at for reward.
-        self.bin_locations = [np.array([1.3, 0.0, 0.0]),
-                              np.array([-1.3, 0.0, 0.0])]
-
-        # Drop tokens this close to the bin location for reward
-        self.bin_radius = 0.25
 
         # Where each token is picked up
         self.token_entry_locations = [np.array([-1.0, +0.5, 0.0]),
@@ -120,11 +121,23 @@ class PassingGame(ParallelEnv):
 
     def is_token_at_bin(self, token):
         """ Return true if token is at the correct bin"""
-        distance_to_bin = np.linalg.norm(token.location -
-                                         self.bin_locations[token.arm_id])
-        if token.state == "dropped" and distance_to_bin < self.bin_radius:
+        distance_to_bin = self.token_distance_from_bin(token)
+        if token.state == "dropped" and distance_to_bin < self.bins[
+                                        token.arm_id].radius:
             return True
         return False
+
+    def token_distance_from_bin(self, token):
+        """ Return token distance from its bin."""
+        distance_to_bin = np.linalg.norm(token.location -
+                                         self.bins[token.arm_id].location)
+        return distance_to_bin
+
+    def flat_token_distance_from_bin(self, token):
+        """ Return token distance from its bin only in the XY plane."""
+        flat_distance_to_bin = np.linalg.norm(token.location[:2] -
+                                         self.bins[token.arm_id].location[:2])
+        return flat_distance_to_bin
 
     def _get_obs(self, agent_index):
         """ Returns an 86x1 array with observations from current state.
@@ -176,7 +189,7 @@ class PassingGame(ParallelEnv):
         state = np.concatenate((agent_arm.angles,
                         agent_arm.origin,
                         agent_arm.joint_locs.flatten(),
-                        self.bin_locations[agent_index],
+                        self.bins[agent_index].location,
                         self.token_entry_locations[agent_index],
                         np.array([token.location for token in
                                     self.tokens[agent_index]]).flatten(),
@@ -186,7 +199,7 @@ class PassingGame(ParallelEnv):
                         other_arm.angles,
                         other_arm.origin,
                         other_arm.joint_locs.flatten(),
-                        self.bin_locations[agent_index-1],
+                        self.bins[agent_index-1].location,
                         self.token_entry_locations[agent_index-1],
                         np.array([token.location for token in
                                     self.tokens[agent_index-1]]).flatten(),
@@ -214,7 +227,7 @@ class PassingGame(ParallelEnv):
         """ Resets simulation environment. See gym.env.reset(). """
         self.agents = self.possible_agents[:]
 
-        # Reset Arms and Tokens
+        # Reset Arms, Tokens, and Bins
         self.arms = [Arm(link_lengths=[.327, .393, .139],
                          origin=[-.65, 0.0, 0.333]),
                      Arm(link_lengths=[.327, .393, .139],
@@ -226,6 +239,29 @@ class PassingGame(ParallelEnv):
             [Token(self.token_entry_locations[1], 1)
                 for i in range(self.num_tokens_per_arm)]
             ]
+
+
+        # TODO(kerwu): put bins in reach of opposite arm and randomize
+        self.bins = [Bin([-1.3, 0.0, 0.0]),
+                     Bin([1.3, 0.0, 0.0])]
+        # TODO(kerwu) enable randomization of bin location
+        # Randomize Bin locations to be within the reach of each arm.
+        # TODO(kerwu): make such that they are out of each arm's reach.
+        # THis is just for training.
+        # We can try eval in a different manner.
+        # bin_location_0 = self.token_entry_locations[0]
+        # bin_location_1 = self.token_entry_locations[1]
+        # self.bins = [Bin(bin_location_0),
+        #              Bin(bin_location_1)]
+        #
+        # while self.is_token_at_bin(self.tokens[0][0]):
+        #     bin_location_0 = self.arms[0].calculate_joint_locs(
+        #                                     np.random.randn(4))[-1]
+        #     self.bins[0] = Bin(bin_location_0)
+        # while self.is_token_at_bin(self.tokens[1][0]):
+        #     bin_location_1 = self.arms[1].calculate_joint_locs(
+        #                                     np.random.randn(4))[-1]
+        #     self.bins[1] = Bin(bin_location_1)
 
         observation = {self.agents[0]: self._get_obs(0),
                        self.agents[1]: self._get_obs(1)}
@@ -256,8 +292,9 @@ class PassingGame(ParallelEnv):
             self.agents = []
             return {}, {}, {}, {}
 
+        reward = {self.agents[0]: 0,
+                  self.agents[1]: 0,}
 
-        reward = {self.agents[0]: 0., self.agents[1]: 0.}
         for i in range(len(self.agents)):
             arm = self.arms[i]
             action = actions[self.agents[i]]
@@ -288,10 +325,29 @@ class PassingGame(ParallelEnv):
                 token = arm.drop_token()
                 if token:
                     if self.is_token_at_bin(token):
-                        reward[self.agents[i]] = 100
-                        reward[self.agents[i-1]] = 100
+                        reward[self.agents[i]] += 10000
+                        reward[self.agents[i-1]] += 10000
                     # print("dropped token")
                     # print(self._get_obs(i))
+
+        rewards_per_token = []
+        for arm_tokens in self.tokens:
+            for token in arm_tokens:
+                if not self.is_token_at_bin(token):
+                    rewards_per_token.append(
+                        -self.flat_token_distance_from_bin(token))
+
+        for i in range(2):
+            arm = self.arms[i]
+            if arm.held_token is None:
+                for token in self.tokens[i]:
+                    if not self.is_token_at_bin(token):
+                        rewards_per_token.append(
+                            -np.linalg.norm(arm.joint_locs[-1]-token.location))
+        total_rewards = np.sum(rewards_per_token)
+        reward[self.agents[0]] += total_rewards
+        reward[self.agents[1]] += total_rewards
+
 
         self.current_steps += 1
         env_done = self.current_steps > self.max_episode_steps
@@ -302,15 +358,12 @@ class PassingGame(ParallelEnv):
                        self.agents[1]: self._get_obs(1)}
         info = {self.agents[0]: self._get_info(0),
                 self.agents[1]: self._get_info(1)}
+
+        self.render()
         return observation, reward, done, info
 
     def render(self, mode="human"):
         """ Renders simulation for viewing. """
-
-        # Import robotics toolbox
-        import roboticstoolbox as rtb
-        from roboticstoolbox.backends.swift import Swift  # 3D visualizer
-        from two_panda_world import TwoPandaWorld
 
         # On initial startup
         if self.swift_backend is None:
@@ -321,8 +374,8 @@ class PassingGame(ParallelEnv):
             self.swift_backend.launch()             # activate it
             self.swift_backend.add(self.rtb_robot)  # add robot to the 3D scene
             self.swift_backend.set_camera_pose([2.5, 2.5, 2.5], [-1, -1, -1])
-            
-        # Update Joint Angles 
+
+        # Update Joint Angles
         ang_signs = np.array([1, -1, 1, 1])  # env/panda mapping
         ang_offsets = np.array([0., -.27, -.48, 3.00])
         # Robot 0
@@ -373,15 +426,15 @@ class PassingGame(ParallelEnv):
         # Update bins
         # Bin 0 (blue)
         self.rtb_robot.links[35].ets = rtb.ETS([
-                rtb.ET.tx(self.bin_locations[0][0]),
-                rtb.ET.ty(self.bin_locations[0][1]),
-                rtb.ET.tz(self.bin_locations[0][2])
+                rtb.ET.tx(self.bins[0].location[0]),
+                rtb.ET.ty(self.bins[0].location[1]),
+                rtb.ET.tz(self.bins[0].location[2])
         ])
         # Bin 1 (red)
         self.rtb_robot.links[36].ets = rtb.ETS([
-                rtb.ET.tx(self.bin_locations[1][0]),
-                rtb.ET.ty(self.bin_locations[1][1]),
-                rtb.ET.tz(self.bin_locations[1][2])
+                rtb.ET.tx(self.bins[1].location[0]),
+                rtb.ET.ty(self.bins[1].location[1]),
+                rtb.ET.tz(self.bins[1].location[2])
         ])
 
         # Update render
