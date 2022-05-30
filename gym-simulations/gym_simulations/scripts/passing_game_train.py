@@ -18,7 +18,7 @@ print(sys.path)
 import os
 import gym
 import pettingzoo
-from stable_baselines3 import DQN, PPO
+from stable_baselines3 import DQN, PPO, HerReplayBuffer
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.callbacks import CallbackList, EvalCallback, StopTrainingOnRewardThreshold
 from stable_baselines3.common.monitor import Monitor
