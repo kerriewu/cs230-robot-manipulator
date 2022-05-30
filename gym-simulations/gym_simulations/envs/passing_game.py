@@ -29,12 +29,15 @@ from roboticstoolbox.backends.swift import Swift  # 3D visualizer
 # from two_panda_world import TwoPandaWorld
 from gym_simulations.envs.two_panda_world import TwoPandaWorld
 
+class Spec():
+    def __init__(self):
+        self.id = "PassingGame"
 
 class PassingGame(ParallelEnv):
     metadata = {"render_modes" : ["human", "rgb_array"], "render_fps" : 300}
 
     def __init__(self,
-                 angle_deltas=[.07, .07, .07, .07],
+                 angle_deltas=[.087, .087, .087, .087],
                  max_episode_steps = 10000):
         """
         TODO(kerwu): update description to match bin refactor.
@@ -67,6 +70,9 @@ class PassingGame(ParallelEnv):
 
         self.agent_name_mapping = dict(zip(self.possible_agents,
                                         list(range(len(self.possible_agents)))))
+
+        self.name = "PassingGame-v0"
+        self.spec = Spec()
 
         # Angle deltas are the same for both arms.
         self.angle_deltas = np.array(angle_deltas)
@@ -103,16 +109,7 @@ class PassingGame(ParallelEnv):
     """ See _get_obs for documentation on observations."""
     @functools.lru_cache(maxsize=None)
     def observation_space(self, agent):
-        # return spaces.Box(low=-50, high=50, shape=(86,))
-        return spaces.Dict({'observation': spaces.Box(low=-50,
-                                                      high=50,
-                                                      shape=(86,)),
-                            'achieved_goal': spaces.Box(low=-50,
-                                                        high=50,
-                                                        shape=(4,)),
-                            'desired_goal': spaces.Box(low=-50,
-                                                       high=50,
-                                                       shape=(4,))})
+        return spaces.Box(low=-50, high=50, shape=(86,))
 
     """ Discrete actions: +base_angle,
                           -base_angle,
@@ -150,7 +147,6 @@ class PassingGame(ParallelEnv):
 
     def _get_obs(self, agent_index):
         """ Returns an 86x1 array with observations from current state.
-
 
             Each agent observes:
               Self arm Angles            4
@@ -219,6 +215,9 @@ class PassingGame(ParallelEnv):
 
         return np.array(state).reshape(86,)
 
+    def is_done(self):
+        return self._success() or (self.current_steps >= self.max_episode_steps)
+
     def _success(self):
         """ Returns true if all tokens have been dropped at the appropriate
             bin locations. """
@@ -228,22 +227,20 @@ class PassingGame(ParallelEnv):
                 success = success and self.is_token_at_bin(token)
         return success
 
-    def _get_info(self, agent_index, last_dropped_token_location=None):
+    def _get_info(self, agent_index):
         """ Returns a dictionary with information about the current state. """
-        return {"is_success": self._success()}
-
-        # return {"is_success": self._success()
-        #         "bin_location": self.bins[agent_index].location,
-        #         "bin_radius": self.bins[agent_index].radius,
-        #         "token_entry_location": self.token_entry_locations[i],
-        #         "token_locations": [token.location for token in self.tokens[agent_index]],
-        #         "last_agent_action": action,
-        #         "last_dropped_token": last_dropped_token_location,
-        #         ""}
+        return {"is_success": self._success(),
+                "current_steps": self.current_steps,
+                "current_episode_reward": self.episode_reward[agent_index],
+                "done": self.is_done()}
 
     def reset(self, seed=None, return_info=False, options=None):
         """ Resets simulation environment. See gym.env.reset(). """
         self.agents = self.possible_agents[:]
+
+        self.current_steps = 0
+
+        self.episode_reward = [0., 0.]
 
         # Reset Arms, Tokens, and Bins
         self.arms = [Arm(link_lengths=[.327, .393, .139],
@@ -258,10 +255,9 @@ class PassingGame(ParallelEnv):
                 for i in range(self.num_tokens_per_arm)]
             ]
 
-
         # TODO(kerwu): put bins in reach of opposite arm and randomize
-        self.bins = [Bin([-1.3, 0.0, 0.0]),
-                     Bin([1.3, 0.0, 0.0])]
+        self.bins = [Bin([0.0, 0.0, 0.0]),
+                     Bin([0.0, 0.0, 0.0])]
         # TODO(kerwu) enable randomization of bin location
         # Randomize Bin locations to be within the reach of each arm.
         # TODO(kerwu): make such that they are out of each arm's reach.
@@ -281,65 +277,12 @@ class PassingGame(ParallelEnv):
         #                                     np.random.randn(4))[-1]
         #     self.bins[1] = Bin(bin_location_1)
 
-        # observation = {self.agents[0]: self._get_obs(0),
-        #                self.agents[1]: self._get_obs(1)}
-        observation = {self.agents[0]: {"observation": self._get_obs(0),
-                                        "achieved_goal": np.append(
-                                                self.bins[0].location, self.bins[0].radius),
-                                        "desired_goal": np.append(
-                                                self.bins[0].location, self.bins[0].radius)},
-                       self.agents[1]:  {"observation": self._get_obs(1),
-                                        "achieved_goal": np.append(
-                                                self.bins[1].location, self.bins[1].radius),
-                                        "desired_goal": np.append(
-                                                self.bins[1].location, self.bins[1].radius)}}
+        observation = {self.agents[0]: self._get_obs(0),
+                       self.agents[1]: self._get_obs(1)}
         info = {self.agents[0]: self._get_info(0),
                 self.agents[1]: self._get_info(1)}
 
-        self.current_steps = 0
-
         return (observation, info) if return_info else observation
-
-    def compute_reward(self, achieved_goal, desired_goal, info):
-
-        reward = {self.agents[0]: 0,
-                  self.agents[1]: 0,}
-
-        # for i in range(len(self.agents)):
-        #     arm = self.arms[i]
-        #     if action == 9:
-        #         token = arm.drop_token()
-        #         if token:
-        #             if self.is_token_at_bin(token):
-        #                 reward[self.agents[i]] += 10000
-        #                 # reward[self.agents[i-1]] += 10000
-        #             # print("dropped token")
-        #             # print(self._get_obs(i))
-        #
-        # rewards_per_token = [[],[]]
-        # # for i in range(2):
-        # #     for token in self.tokens[i]:
-        # #         if not self.is_token_at_bin(token):
-        # #             rewards_per_token[i].append(
-        # #                 -self.flat_token_distance_from_bin(token))
-        #
-        # for i in range(2):
-        #     arm = self.arms[i]
-        #     if arm.held_token is None:
-        #         for token in self.tokens[i]:
-        #             if not self.is_token_at_bin(token):
-        #                 rewards_per_token[i].append(
-        #                     -np.linalg.norm(arm.joint_locs[-1]-token.location))
-        #     else:
-        #         rewards_per_token[i].append(-self.flat_token_distance_from_bin(
-        #                                                 arm.held_token))
-        #
-        # total_rewards = [np.sum(rewards_list) for rewards_list
-        #                                                 in rewards_per_token]
-        # reward[self.agents[0]] += total_rewards[0]
-        # reward[self.agents[1]] += total_rewards[1]
-
-        return reward
 
     def step(self, actions):
         """ Applies one step in the simulation.
@@ -364,8 +307,6 @@ class PassingGame(ParallelEnv):
         reward = {self.agents[0]: 0,
                   self.agents[1]: 0,}
 
-        # last_dropped_token = None
-
         for i in range(len(self.agents)):
             arm = self.arms[i]
             action = actions[self.agents[i]]
@@ -389,14 +330,19 @@ class PassingGame(ParallelEnv):
                                                          arm.joint_locs[-1])
                         if distance_to_arm <= 0.25:
                             arm.get_token(token)
+                            reward[self.agents[i]] += 1e6
                             # print("got token")
                             # print(self._get_obs(i))
                             break
             if action == 9:
-                token = arm.drop_token()
-                if token:
-                    if self.is_token_at_bin(token):
-                        reward[self.agents[i]] += 10000
+                if arm.held_token is not None:
+                    if (self.flat_token_distance_from_bin(arm.held_token) <
+                                self.bins[i].radius):
+                        token = arm.drop_token()
+                        if self.is_token_at_bin(token):
+                            reward[self.agents[i]] += 1e6
+                        else:
+                            print("Error: dropped token but not at bin location")
                         # reward[self.agents[i-1]] += 10000
                     # print("dropped token")
                     # print(self._get_obs(i))
@@ -411,12 +357,10 @@ class PassingGame(ParallelEnv):
         for i in range(2):
             arm = self.arms[i]
             if arm.held_token is None:
-                for token in self.tokens[i]:
-                    if not self.is_token_at_bin(token):
-                        rewards_per_token[i].append(
-                            -np.linalg.norm(arm.joint_locs[-1]-token.location))
+                rewards_per_token[i].append(
+                    -np.linalg.norm(arm.joint_locs[-1]-self.token_entry_locations[i]))
             else:
-                rewards_per_token[i].append(-self.flat_token_distance_from_bin(
+                rewards_per_token[i].append(-self.token_distance_from_bin(
                                                         arm.held_token))
 
         total_rewards = [np.sum(rewards_list) for rewards_list
@@ -424,26 +368,19 @@ class PassingGame(ParallelEnv):
         reward[self.agents[0]] += total_rewards[0]
         reward[self.agents[1]] += total_rewards[1]
 
-
         self.current_steps += 1
-        env_done = self.current_steps > self.max_episode_steps
 
-        done = {self.agents[0]: self._success() or env_done,
-                self.agents[1]: self._success() or env_done}
-        observation = {self.agents[0]: {"observation": self._get_obs(0),
-                                        "achieved_goal": np.append(
-                                                self.bins[0].location, self.bins[0].radius),
-                                        "desired_goal": np.append(
-                                                self.bins[0].location, self.bins[0].radius)},
-                       self.agents[1]:  {"observation": self._get_obs(1),
-                                        "achieved_goal": np.append(
-                                                self.bins[1].location, self.bins[1].radius),
-                                        "desired_goal": np.append(
-                                                self.bins[1].location, self.bins[1].radius)}}
+        done = {self.agents[0]: self.is_done(),
+                self.agents[1]: self.is_done()}
+        observation = {self.agents[0]: self._get_obs(0),
+                       self.agents[1]: self._get_obs(1)}
         info = {self.agents[0]: self._get_info(0),
                 self.agents[1]: self._get_info(1)}
 
-        self.render()
+        self.episode_reward[0] += reward[self.agents[0]]
+        self.episode_reward[1] += reward[self.agents[1]]
+
+        # self.render()
         return observation, reward, done, info
 
     def render(self, mode="human"):
