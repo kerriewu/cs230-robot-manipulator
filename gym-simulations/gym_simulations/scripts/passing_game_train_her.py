@@ -49,8 +49,15 @@ if __name__ == '__main__':
          callback_on_new_best=callback_on_best)
 
     # Instantiate the agent
-    model = DQN('MlpPolicy',
+    model = DQN('MultiInputPolicy',
                 env,
+                replay_buffer_class=HerReplayBuffer,
+                replay_buffer_kwargs=dict(
+                    n_sampled_goal=4,
+                    goal_selection_strategy='future',
+                    online_sampling=False,
+                    max_episode_length=10000
+                ),
                 learning_starts=1e5,
                 exploration_fraction=0.5,
                 exploration_final_eps=0.0,

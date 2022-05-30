@@ -34,7 +34,7 @@ class PassingGame(ParallelEnv):
     metadata = {"render_modes" : ["human", "rgb_array"], "render_fps" : 300}
 
     def __init__(self,
-                 angle_deltas=[.01745, .01745, .01745, .01745],
+                 angle_deltas=[.07, .07, .07, .07],
                  max_episode_steps = 10000):
         """
         TODO(kerwu): update description to match bin refactor.
@@ -103,7 +103,16 @@ class PassingGame(ParallelEnv):
     """ See _get_obs for documentation on observations."""
     @functools.lru_cache(maxsize=None)
     def observation_space(self, agent):
-        return spaces.Box(low=-50, high=50, shape=(86,))
+        # return spaces.Box(low=-50, high=50, shape=(86,))
+        return spaces.Dict({'observation': spaces.Box(low=-50,
+                                                      high=50,
+                                                      shape=(86,)),
+                            'achieved_goal': spaces.Box(low=-50,
+                                                        high=50,
+                                                        shape=(4,)),
+                            'desired_goal': spaces.Box(low=-50,
+                                                       high=50,
+                                                       shape=(4,))})
 
     """ Discrete actions: +base_angle,
                           -base_angle,
@@ -219,9 +228,18 @@ class PassingGame(ParallelEnv):
                 success = success and self.is_token_at_bin(token)
         return success
 
-    def _get_info(self, agent_index):
+    def _get_info(self, agent_index, last_dropped_token_location=None):
         """ Returns a dictionary with information about the current state. """
         return {"is_success": self._success()}
+
+        # return {"is_success": self._success()
+        #         "bin_location": self.bins[agent_index].location,
+        #         "bin_radius": self.bins[agent_index].radius,
+        #         "token_entry_location": self.token_entry_locations[i],
+        #         "token_locations": [token.location for token in self.tokens[agent_index]],
+        #         "last_agent_action": action,
+        #         "last_dropped_token": last_dropped_token_location,
+        #         ""}
 
     def reset(self, seed=None, return_info=False, options=None):
         """ Resets simulation environment. See gym.env.reset(). """
@@ -263,14 +281,65 @@ class PassingGame(ParallelEnv):
         #                                     np.random.randn(4))[-1]
         #     self.bins[1] = Bin(bin_location_1)
 
-        observation = {self.agents[0]: self._get_obs(0),
-                       self.agents[1]: self._get_obs(1)}
+        # observation = {self.agents[0]: self._get_obs(0),
+        #                self.agents[1]: self._get_obs(1)}
+        observation = {self.agents[0]: {"observation": self._get_obs(0),
+                                        "achieved_goal": np.append(
+                                                self.bins[0].location, self.bins[0].radius),
+                                        "desired_goal": np.append(
+                                                self.bins[0].location, self.bins[0].radius)},
+                       self.agents[1]:  {"observation": self._get_obs(1),
+                                        "achieved_goal": np.append(
+                                                self.bins[1].location, self.bins[1].radius),
+                                        "desired_goal": np.append(
+                                                self.bins[1].location, self.bins[1].radius)}}
         info = {self.agents[0]: self._get_info(0),
                 self.agents[1]: self._get_info(1)}
 
         self.current_steps = 0
 
         return (observation, info) if return_info else observation
+
+    def compute_reward(self, achieved_goal, desired_goal, info):
+
+        reward = {self.agents[0]: 0,
+                  self.agents[1]: 0,}
+
+        # for i in range(len(self.agents)):
+        #     arm = self.arms[i]
+        #     if action == 9:
+        #         token = arm.drop_token()
+        #         if token:
+        #             if self.is_token_at_bin(token):
+        #                 reward[self.agents[i]] += 10000
+        #                 # reward[self.agents[i-1]] += 10000
+        #             # print("dropped token")
+        #             # print(self._get_obs(i))
+        #
+        # rewards_per_token = [[],[]]
+        # # for i in range(2):
+        # #     for token in self.tokens[i]:
+        # #         if not self.is_token_at_bin(token):
+        # #             rewards_per_token[i].append(
+        # #                 -self.flat_token_distance_from_bin(token))
+        #
+        # for i in range(2):
+        #     arm = self.arms[i]
+        #     if arm.held_token is None:
+        #         for token in self.tokens[i]:
+        #             if not self.is_token_at_bin(token):
+        #                 rewards_per_token[i].append(
+        #                     -np.linalg.norm(arm.joint_locs[-1]-token.location))
+        #     else:
+        #         rewards_per_token[i].append(-self.flat_token_distance_from_bin(
+        #                                                 arm.held_token))
+        #
+        # total_rewards = [np.sum(rewards_list) for rewards_list
+        #                                                 in rewards_per_token]
+        # reward[self.agents[0]] += total_rewards[0]
+        # reward[self.agents[1]] += total_rewards[1]
+
+        return reward
 
     def step(self, actions):
         """ Applies one step in the simulation.
@@ -294,6 +363,8 @@ class PassingGame(ParallelEnv):
 
         reward = {self.agents[0]: 0,
                   self.agents[1]: 0,}
+
+        # last_dropped_token = None
 
         for i in range(len(self.agents)):
             arm = self.arms[i]
@@ -326,27 +397,32 @@ class PassingGame(ParallelEnv):
                 if token:
                     if self.is_token_at_bin(token):
                         reward[self.agents[i]] += 10000
-                        reward[self.agents[i-1]] += 10000
+                        # reward[self.agents[i-1]] += 10000
                     # print("dropped token")
                     # print(self._get_obs(i))
 
-        rewards_per_token = []
-        for arm_tokens in self.tokens:
-            for token in arm_tokens:
-                if not self.is_token_at_bin(token):
-                    rewards_per_token.append(
-                        -self.flat_token_distance_from_bin(token))
+        rewards_per_token = [[],[]]
+        # for i in range(2):
+        #     for token in self.tokens[i]:
+        #         if not self.is_token_at_bin(token):
+        #             rewards_per_token[i].append(
+        #                 -self.flat_token_distance_from_bin(token))
 
         for i in range(2):
             arm = self.arms[i]
             if arm.held_token is None:
                 for token in self.tokens[i]:
                     if not self.is_token_at_bin(token):
-                        rewards_per_token.append(
+                        rewards_per_token[i].append(
                             -np.linalg.norm(arm.joint_locs[-1]-token.location))
-        total_rewards = np.sum(rewards_per_token)
-        reward[self.agents[0]] += total_rewards
-        reward[self.agents[1]] += total_rewards
+            else:
+                rewards_per_token[i].append(-self.flat_token_distance_from_bin(
+                                                        arm.held_token))
+
+        total_rewards = [np.sum(rewards_list) for rewards_list
+                                                        in rewards_per_token]
+        reward[self.agents[0]] += total_rewards[0]
+        reward[self.agents[1]] += total_rewards[1]
 
 
         self.current_steps += 1
@@ -354,8 +430,16 @@ class PassingGame(ParallelEnv):
 
         done = {self.agents[0]: self._success() or env_done,
                 self.agents[1]: self._success() or env_done}
-        observation = {self.agents[0]: self._get_obs(0),
-                       self.agents[1]: self._get_obs(1)}
+        observation = {self.agents[0]: {"observation": self._get_obs(0),
+                                        "achieved_goal": np.append(
+                                                self.bins[0].location, self.bins[0].radius),
+                                        "desired_goal": np.append(
+                                                self.bins[0].location, self.bins[0].radius)},
+                       self.agents[1]:  {"observation": self._get_obs(1),
+                                        "achieved_goal": np.append(
+                                                self.bins[1].location, self.bins[1].radius),
+                                        "desired_goal": np.append(
+                                                self.bins[1].location, self.bins[1].radius)}}
         info = {self.agents[0]: self._get_info(0),
                 self.agents[1]: self._get_info(1)}
 
