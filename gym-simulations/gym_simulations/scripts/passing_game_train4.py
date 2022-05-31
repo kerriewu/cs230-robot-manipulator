@@ -78,14 +78,32 @@ if __name__ == '__main__':
     # print('evaluated')
     # print("[Mean reward over last 10 eval episodes is {}".format(mean_reward))
     
-    print("Rendering with learned policy")
+    print("Evaluating with learned policy")
     obs = env.reset()
     # Measure performance without render for first few episodes, then render
     n_success = 0
     n_episodes = 0
+    total_moved = 0
+    total_scored = 0
+    episode_moved = 0
+    episode_scored = 0
     while True:
         actions, _states = model.predict(obs)
         obs, reward, done, info = env.step(actions)
+        scored = info[0]["num_scored"] + info[1]["num_scored"]
+        if scored > episode_scored:
+            episode_scored += 1
+            episode_moved += 1
+            total_scored += 1
+            total_moved += 1
+            print("Episode scored/moved = %i / %i" % 
+                    (episode_scored, episode_moved))
+        moved = info[0]["num_moved"] + info[1]["num_moved"]
+        if moved > total_moved:
+            total_moved += 1
+            episode_moved += 1
+            print("Episode scored/moved = %i / %i" % 
+                    (episode_scored, episode_moved))
         if n_episodes >= 0:
             env.render()
         if True in done:
@@ -93,6 +111,9 @@ if __name__ == '__main__':
             for info_dict in info:
                 if info_dict["is_success"]:
                     n_success += 1
+            print("Avg success: %.2f;    Avg scored: %.2f;    Avg moved: %.2f" 
+                    % (n_success/n_episodes, total_scored/n_episodes,
+                            total_moved/n_episodes))
+            episode_moved = 0
+            episode_scored = 0
             obs = env.reset()
-            print("Success rate: %.2f" % (n_success / n_episodes))
-    
