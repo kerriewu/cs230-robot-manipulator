@@ -92,28 +92,26 @@ if __name__ == '__main__':
         obs, reward, done, info = env.step(actions)
         scored = info[0]["num_scored"] + info[1]["num_scored"]
         if scored > episode_scored:
-            episode_scored += 1
-            episode_moved += 1
-            total_scored += 1
-            total_moved += 1
+            episode_scored = scored
             print("Episode scored/moved = %i / %i" % 
                     (episode_scored, episode_moved))
         moved = info[0]["num_moved"] + info[1]["num_moved"]
-        if moved > total_moved:
-            total_moved += 1
-            episode_moved += 1
+        if moved > episode_moved:
+            episode_moved = moved
             print("Episode scored/moved = %i / %i" % 
                     (episode_scored, episode_moved))
-        if n_episodes >= 0:
-            env.render()
+        # if n_episodes >= 0:
+            # env.render()
         if True in done:
             n_episodes += 1
+            total_moved += episode_moved
+            total_scored += episode_scored
+            episode_moved = 0
+            episode_scored = 0
             for info_dict in info:
                 if info_dict["is_success"]:
                     n_success += 1
             print("Avg success: %.2f;    Avg scored: %.2f;    Avg moved: %.2f" 
                     % (n_success/n_episodes, total_scored/n_episodes,
                             total_moved/n_episodes))
-            episode_moved = 0
-            episode_scored = 0
             obs = env.reset()
