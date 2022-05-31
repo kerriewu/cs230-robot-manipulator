@@ -23,6 +23,7 @@ from stable_baselines3.common.callbacks import CallbackList, EvalCallback, StopT
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.env_checker import check_env
 import supersuit as ss
+import numpy as np
 
 from gym_simulations.envs.passing_game4 import PassingGame
 
@@ -77,8 +78,12 @@ if __name__ == '__main__':
     episode_moved = 0
     episode_scored = 0
     while True:
-        actions, _states = model.predict(obs)
-        obs, reward, done, info = env.step(actions)
+        actions, _states = model.policy.predict(obs)
+        if np.random.random() < 0.5:
+            obs, reward, done, info = env.step(actions)
+        else:
+            obs, reward, done, info = env.step(np.random.choice(
+                    np.arange(10), 2))
         scored = info[0]["num_scored"] + info[1]["num_scored"]
         if scored > episode_scored:
             episode_scored = scored
