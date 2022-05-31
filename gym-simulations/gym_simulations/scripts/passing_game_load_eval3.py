@@ -27,8 +27,8 @@ import supersuit as ss
 from gym_simulations.envs.passing_game3 import PassingGame
 
 if __name__ == '__main__':
-    model_desc = "147_entry_or_bin_n5_5e5"
-    BASE_PATH='cs230-robot-manipulator/gym-simulations/gym_simulations/'
+    model_desc = "149_A_to_B_5e5_training_for_plot_01"
+    BASE_PATH='gym-simulations/gym_simulations/'
 
     # Create environment
     env = ss.pettingzoo_env_to_vec_env_v1(PassingGame())
@@ -72,15 +72,40 @@ if __name__ == '__main__':
     # Measure performance without render for first few episodes, then render
     n_success = 0
     n_episodes = 0
-    while True:
-        actions, _states = model.predict(obs)
+    n_to_checkpoint = 0
+    while n_episodes <= 30:
+        actions, _states = model.predict(obs, deterministic=True)
         obs, reward, done, info = env.step(actions)
-        if n_episodes >= 0:
-            env.render()
         if True in done:
             n_episodes += 1
             for info_dict in info:
                 if info_dict["is_success"]:
                     n_success += 1
+                n_to_checkpoint += info_dict['num_tokens_at_checkpoint']
             obs = env.reset()
-            print("Success rate: %.2f" % (n_success / n_episodes))
+            print(n_episodes)
+    print("Success rate: %.2f" % (n_success / n_episodes))
+    print("Num tokens to checkpont: %.2f" % (n_to_checkpoint / n_episodes / 2))
+    print(n_success)
+
+    model = DQN('MlpPolicy', eval_env)
+    print("Rendering with random policy")
+    obs = eval_env.reset()
+    # Measure performance without render for first few episodes, then render
+    n_success = 0
+    n_episodes = 0
+    n_to_checkpoint = 0
+    while n_episodes <= 30:
+        actions, _states = model.predict(obs)
+        obs, reward, done, info = eval_env.step(actions)
+        if True in done:
+            n_episodes += 1
+            for info_dict in info:
+                if info_dict["is_success"]:
+                    n_success += 1
+                n_to_checkpoint += info_dict['num_tokens_at_checkpoint']
+            obs = eval_env.reset()
+            print(n_episodes)
+    print("Success rate: %.2f" % (n_success / n_episodes))
+    print("Num tokens to checkpont: %.2f" % (n_to_checkpoint / n_episodes / 2))
+    print(n_success)
