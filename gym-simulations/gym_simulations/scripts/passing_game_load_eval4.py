@@ -27,8 +27,8 @@ import supersuit as ss
 from gym_simulations.envs.passing_game4 import PassingGame
 
 if __name__ == '__main__':
-    model_desc = "159_4_phase_observed_1e6"
-    BASE_PATH='cs230-robot-manipulator/gym-simulations/gym_simulations/'
+    model_desc = "159_4_phase_observed_1e6_for_learning_plot"
+    BASE_PATH='gym-simulations/gym_simulations/'
 
     # Create environment
     env = ss.pettingzoo_env_to_vec_env_v1(PassingGame())
@@ -76,31 +76,51 @@ if __name__ == '__main__':
     total_scored = 0
     episode_moved = 0
     episode_scored = 0
-    while True:
+    while n_episodes <= 30:
         actions, _states = model.predict(obs)
         obs, reward, done, info = env.step(actions)
-        scored = info[0]["num_scored"] + info[1]["num_scored"]
-        if scored > episode_scored:
-            episode_scored = scored
-            print("Episode scored/moved = %i / %i" % 
-                    (episode_scored, episode_moved))
-        moved = info[0]["num_moved"] + info[1]["num_moved"]
-        if moved > episode_moved:
-            episode_moved = moved
-            print("Episode scored/moved = %i / %i" % 
-                    (episode_scored, episode_moved))
         # if n_episodes >= 0:
             # env.render()
         if True in done:
+            scored = info[0]["num_scored"] + info[1]["num_scored"]
+            moved = info[0]["num_moved"] + info[1]["num_moved"]
             n_episodes += 1
-            total_moved += episode_moved
-            total_scored += episode_scored
-            episode_moved = 0
-            episode_scored = 0
+            total_moved += moved
+            total_scored += scored
             for info_dict in info:
                 if info_dict["is_success"]:
                     n_success += 1
-            print("Avg success: %.2f;    Avg scored: %.2f;    Avg moved: %.2f" 
-                    % (n_success/n_episodes, total_scored/n_episodes,
-                            total_moved/n_episodes))
             obs = env.reset()
+            print("n_episodes: {}".format(n_episodes))
+    print("Avg success: %.2f;    Avg scored: %.2f;    Avg moved: %.2f"
+            % (n_success/n_episodes, total_scored/n_episodes,
+                    total_moved/n_episodes))
+
+    model = DQN('MlpPolicy', eval_env)
+    print("Evaluating with random policy")
+    obs = eval_env.reset()
+    # Measure performance without render for first few episodes, then render
+    n_success = 0
+    n_episodes = 0
+    total_moved = 0
+    total_scored = 0
+    episode_moved = 0
+    episode_scored = 0
+    while n_episodes <= 30:
+        actions, _states = model.predict(obs)
+        obs, reward, done, info = eval_env.step(actions)
+        # if n_episodes >= 0:
+            # env.render()
+        if True in done:
+            scored = info[0]["num_scored"] + info[1]["num_scored"]
+            moved = info[0]["num_moved"] + info[1]["num_moved"]
+            n_episodes += 1
+            total_moved += moved
+            total_scored += scored
+            for info_dict in info:
+                if info_dict["is_success"]:
+                    n_success += 1
+            obs = eval_env.reset()
+    print("Avg success: %.2f;    Avg scored: %.2f;    Avg moved: %.2f"
+            % (n_success/n_episodes, total_scored/n_episodes,
+                    total_moved/n_episodes))

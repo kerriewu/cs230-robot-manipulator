@@ -20,16 +20,55 @@ import gym
 import pettingzoo
 from stable_baselines3 import DQN, PPO
 from stable_baselines3.common.evaluation import evaluate_policy
-from stable_baselines3.common.callbacks import CallbackList, EvalCallback, StopTrainingOnRewardThreshold
+from stable_baselines3.common.callbacks import CallbackList, EvalCallback, StopTrainingOnRewardThreshold, BaseCallback
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.env_checker import check_env
 import supersuit as ss
 
 from gym_simulations.envs.passing_game4 import PassingGame
 
+class TensorboardCallback(BaseCallback):
+    """
+    Custom callback for plotting additional values in tensorboard.
+    Plots length of the episode and the reward per episode.
+    """
+    def __init__(self, verbose=0):
+        self.is_tb_set = False
+        super(TensorboardCallback, self).__init__(verbose)
+
+    def _on_step(self) -> bool:
+        if self.locals['infos'][0]['done']:
+            # print('logged')
+            episode_timesteps = self.locals['infos'][0]['current_steps']
+            num_tokens_at_bin = (self.locals['infos'][0]['num_scored'] +
+                                 self.locals['infos'][1]['num_scored'])
+            num_tokens_to_checkpoint = (self.locals['infos'][0]['num_moved'] +
+                                 self.locals['infos'][1]['num_moved'])
+
+            steps_per_token_at_bin = 20000.0
+            steps_per_token_at_checkpoint = 20000.0
+            if num_tokens_at_bin > 0:
+                steps_per_token_at_bin = (1. *
+                                episode_timesteps) / num_tokens_at_bin
+            if num_tokens_to_checkpoint > 0:
+                steps_per_token_at_checkpoint = (1. *
+                                episode_timesteps) / num_tokens_to_checkpoint
+
+            self.logger.record("rollout/ep_length_timesteps", episode_timesteps)
+            self.logger.record("rollout/ep_reward", self.locals['infos'][0][
+                                                    'current_episode_reward'])
+            self.logger.record("rollout/ep_reward", self.locals['infos'][1][
+                                                    'current_episode_reward'])
+            self.logger.record("rollout/ep_steps_per_token_at_bin",
+                        steps_per_token_at_bin)
+            self.logger.record("rollout/ep_steps_per_token_at_checkpoint",
+                        steps_per_token_at_checkpoint)
+        return True
+
+
 if __name__ == '__main__':
-    model_desc = '159_4_phase_observed_1e6'
-    BASE_PATH='cs230-robot-manipulator/gym-simulations/gym_simulations/'
+    model_desc = '159_4_phase_observed_1e6_for_learning_plot'
+    BASE_PATH='gym-simulations/gym_simulations/'
 
     # Create environment
     log_dir = BASE_PATH+'sim_outputs/logs/' + model_desc
@@ -59,25 +98,26 @@ if __name__ == '__main__':
                 gamma=0.999,
                 verbose=1,
                 batch_size=256,
-                policy_kwargs={"net_arch": [64, 64]}
+                policy_kwargs={"net_arch": [64, 64]},
+                tensorboard_log=log_dir,
     )
 
-    print("\nModel architecture:") 
+    print("\nModel architecture:")
     print(model.policy)
 
     print('\ntraining...')
-    model.learn(total_timesteps=int(1e6))#, callback=eval_callback)
+    model.learn(total_timesteps=int(1e6), callback=TensorboardCallback())#, callback=eval_callback)
     print('trained for some timesteps')
     print('saving')
     model.save(BASE_PATH + 'sim_outputs/models/' + model_desc)
-    
+
     # # Evaluate the agent
     # print('evaluating...')
     # mean_reward, std_reward = evaluate_policy(model, eval_env,
                                                 # n_eval_episodes=10)
     # print('evaluated')
     # print("[Mean reward over last 10 eval episodes is {}".format(mean_reward))
-    
+
     print("Evaluating with learned policy")
     obs = env.reset()
     # Measure performance without render for first few episodes, then render
@@ -93,12 +133,12 @@ if __name__ == '__main__':
         scored = info[0]["num_scored"] + info[1]["num_scored"]
         if scored > episode_scored:
             episode_scored = scored
-            print("Episode scored/moved = %i / %i" % 
+            print("Episode scored/moved = %i / %i" %
                     (episode_scored, episode_moved))
         moved = info[0]["num_moved"] + info[1]["num_moved"]
         if moved > episode_moved:
             episode_moved = moved
-            print("Episode scored/moved = %i / %i" % 
+            print("Episode scored/moved = %i / %i" %
                     (episode_scored, episode_moved))
         # if n_episodes >= 0:
             # env.render()
@@ -111,7 +151,7 @@ if __name__ == '__main__':
             for info_dict in info:
                 if info_dict["is_success"]:
                     n_success += 1
-            print("Avg success: %.2f;    Avg scored: %.2f;    Avg moved: %.2f" 
+            print("Avg success: %.2f;    Avg scored: %.2f;    Avg moved: %.2f"
                     % (n_success/n_episodes, total_scored/n_episodes,
                             total_moved/n_episodes))
             obs = env.reset()

@@ -76,7 +76,7 @@ class PassingGame(ParallelEnv):
         # Drop tokens this close to the bin location for reward
         self.pickup_radius = 0.25
         self.drop_radius = 0.25
-        
+
         # Where each token is picked up
         self.token_entry_locations = [np.array([+1.0, -0.5, 0.0]),
                                       np.array([-1.0, +0.5, 0.0])]
@@ -132,7 +132,7 @@ class PassingGame(ParallelEnv):
         if token.state == "dropped" and distance_to_bin < self.drop_radius:
             return True
         return False
-        
+
     def is_token_at_checkpoint(self, token):
         """ Return true if token is at the correct checkpoint """
         distance_to_point = np.linalg.norm(token.location -
@@ -140,7 +140,7 @@ class PassingGame(ParallelEnv):
         if token.state == "dropped" and distance_to_point < self.drop_radius:
             return True
         return False
-        
+
     def get_available_token_locs(self, agent_index):
         """ Returns array of token locs available for pickup by agent_index. """
         locations = np.zeros((0, 3))
@@ -227,21 +227,21 @@ class PassingGame(ParallelEnv):
                         ))
 
         return np.array(state).reshape(88,)
-    
+
     def _get_reward(self, agent_index):
         pos = self.arms[agent_index].joint_locs[-1]
         locs = self.get_available_token_locs(agent_index)
         ## A to B passing
         # if self.arms[agent_index].held_token is None:  # Not holding token
-            # return -np.linalg.norm(pos - 
+            # return -np.linalg.norm(pos -
                     # self.token_entry_locations[agent_index-1])
         # else:  # Holding token
-            # return -np.linalg.norm(pos[:2] - 
+            # return -np.linalg.norm(pos[:2] -
                         # self.checkpoints[agent_index-1][:2])
         ## -Distance to origin
         # return -np.linalg.norm(self.arms[agent_index].joint_locs[-1])
         ## -Distance to own bin
-        # return -np.linalg.norm(self.arms[agent_index].joint_locs[-1] - 
+        # return -np.linalg.norm(self.arms[agent_index].joint_locs[-1] -
                                    # self.token_entry_locations[agent_index])
         ## -Distance to other end effector
         # return -np.linalg.norm(self.arms[agent_index].joint_locs[-1] -
@@ -253,17 +253,17 @@ class PassingGame(ParallelEnv):
                 # sum -= np.linalg.norm(token.location[:2])
         # return sum
         ## Holding object in hand
-        # return self.arms[agent_index].held_token is not None 
-        
+        # return self.arms[agent_index].held_token is not None
+
         ## Bin or origin based on if holding an object
         # if self.arms[agent_index].held_token is None:  # Not holding token
             # # Distance to entry location or checkpoint
             # if self.arms[agent_index].num_picked_up < 5:
-                # return -np.linalg.norm(pos - 
+                # return -np.linalg.norm(pos -
                         # self.token_entry_locations[agent_index-1])
             # else:
                 # return -np.linalg.norm(pos - self.checkpoints[agent_index])
-            
+
             # Geometric mean of distances to all tokens
             # return -np.prod(np.linalg.norm(locs - pos, axis=1))**(1/len(locs))
             # -min distance to all eligible tokens
@@ -273,10 +273,10 @@ class PassingGame(ParallelEnv):
                 # return 0
         # else:  # Holding token
             # if self.arms[agent_index].held_token.arm_id == agent_index:
-                # return -np.linalg.norm(pos[:2] - 
+                # return -np.linalg.norm(pos[:2] -
                         # self.bin_locations[agent_index][:2])
             # else:
-                # return -np.linalg.norm(pos[:2] - 
+                # return -np.linalg.norm(pos[:2] -
                         # self.checkpoints[agent_index-1][:2])
         ## Don't move joints
         # return -np.linalg.norm(self.arms[agent_index].angles, 1)
@@ -285,25 +285,28 @@ class PassingGame(ParallelEnv):
         # for token in self.tokens[agent_index]:
             # z += token.location[2]
         # return z
-        
+
         ## Go to position based on current "phase"
         if self.arms[agent_index].phase == 0:  # Other entry
-            return -np.linalg.norm(pos - 
+            return -np.linalg.norm(pos -
                         self.token_entry_locations[agent_index-1])
         elif self.arms[agent_index].phase == 1:  # Other checkpoint
-            return -np.linalg.norm(pos[:2] - 
+            return -np.linalg.norm(pos[:2] -
                         self.checkpoints[agent_index-1][:2])
         elif self.arms[agent_index].phase == 2:  # Own checkpoint
-            return -np.linalg.norm(pos - 
+            return -np.linalg.norm(pos -
                         self.checkpoints[agent_index])
         else: # Own bin
-            return -np.linalg.norm(pos[:2] - 
+            return -np.linalg.norm(pos[:2] -
                         self.bin_locations[agent_index][:2])
-        
-        
-        ## Return 0 
+
+
+        ## Return 0
         # return 0
-    
+    def is_done(self):
+        """ Returns True if the environment done (ready for reset). """
+        return self._success() or (self.current_steps >= self.max_episode_steps)
+
     def _success(self):
         """ Returns true if all tokens have been dropped at the appropriate
             bin locations. """
@@ -312,7 +315,7 @@ class PassingGame(ParallelEnv):
             for token in arm_tokens:
                 success = success and self.is_token_at_bin(token)
         return success
-        
+
         # """ Returns true if all tokens have been dropped at the appropriate
             # checkpoint locations. """
         # success = True
@@ -320,33 +323,38 @@ class PassingGame(ParallelEnv):
             # for token in arm_tokens:
                 # success = success and self.is_token_at_checkpoint(token)
         # return success
-        
-        # """ Returns true if at least one token has been dropped at the 
+
+        # """ Returns true if at least one token has been dropped at the
             # appropriate bin location. """
         # for arm_tokens in self.tokens:
             # for token in arm_tokens:
                 # if self.is_token_at_bin(token):
                     # return True
         # return False
-        
+
         # """ Returns true if any arm has picked up 6 tokens. """
         # if self.arms[0].num_picked_up >= 6 or self.arms[1].num_picked_up >= 6:
             # return True
 
     def _get_info(self, agent_index):
         """ Returns a dictionary with information about the current state. """
-        num_scored = sum([self.is_token_at_bin(token) 
+        num_scored = sum([self.is_token_at_bin(token)
                         for token in self.tokens[agent_index]])
-        num_moved = num_scored + sum([self.is_token_at_checkpoint(token) 
+        num_moved = num_scored + sum([self.is_token_at_checkpoint(token)
                         for token in self.tokens[agent_index-1]])
         return {"is_success": self._success(),
+                "done": self.is_done(),
                 "num_picked_up": self.arms[agent_index].num_picked_up,
                 "num_scored": num_scored,
-                "num_moved": num_moved}
+                "num_moved": num_moved,
+                "current_steps": self.current_steps,
+                "current_episode_reward": self.episode_reward[agent_index]}
 
     def reset(self, seed=None, return_info=False, options=None):
         """ Resets simulation environment. See gym.env.reset(). """
         self.agents = self.possible_agents[:]
+        self.current_steps = 0 # Current episode timesteps
+        self.episode_reward = [0., 0.] # current episode cumulative rewards
 
         # Reset Arms and Tokens
         self.arms = [Arm(link_lengths=[.327, .393, .139],
@@ -366,7 +374,6 @@ class PassingGame(ParallelEnv):
         info = {self.agents[0]: self._get_info(0),
                 self.agents[1]: self._get_info(1)}
 
-        self.current_steps = 0
 
         return (observation, info) if return_info else observation
 
@@ -413,7 +420,7 @@ class PassingGame(ParallelEnv):
                             continue
                         if self.is_token_at_bin(token):
                             continue
-                        if (self.is_token_at_checkpoint(token) and 
+                        if (self.is_token_at_checkpoint(token) and
                                 token.arm_id != i):
                             continue
                         distance_to_arm = np.linalg.norm(token.location -
@@ -425,35 +432,36 @@ class PassingGame(ParallelEnv):
                             # print(self._get_obs(i))
                             break
             if action == 9:
-                # Can put opposite color tokens down only at checkpoint; 
+                # Can put opposite color tokens down only at checkpoint;
                 # Can put your color tokens down only at bin
                 if arm.held_token is not None:  # We're holding a token
                     if arm.held_token.arm_id == i:  # We're holding own token
                         if np.linalg.norm(arm.joint_locs[-1,:2] -
-                                self.bin_locations[i][:2]) <= self.drop_radius:  
-                                        # We're close enough to our bin 
+                                self.bin_locations[i][:2]) <= self.drop_radius:
+                                        # We're close enough to our bin
                             token = arm.drop_token()
                             if self.is_token_at_bin(token):
                                 reward[self.agents[i]] += 1e6
-                                # # # 
+                                # # #
                                 # Move token back to start location if scored
                                 ## DISABLED
                                 ## token.location = self.token_entry_locations[
                                         ## token.arm_id]
-                                # # # 
+                                # # #
                     else:  # We're holding the other token
                         if np.linalg.norm(arm.joint_locs[-1,:2] -
-                                self.checkpoints[i-1][:2]) <= self.drop_radius:  
-                                        # We're close enough to other chckpoint 
+                                self.checkpoints[i-1][:2]) <= self.drop_radius:
+                                        # We're close enough to other chckpoint
                             token = arm.drop_token()
                             if self.is_token_at_checkpoint(token):
                                 reward[self.agents[i]] += 1e6
-        # # # 
+        # # #
         self.current_steps += 1
-        env_done = self.current_steps > self.max_episode_steps
 
-        done = {self.agents[0]: self._success() or env_done,
-                self.agents[1]: self._success() or env_done}
+        self.episode_reward[0] += reward[self.agents[0]]
+        self.episode_reward[1] += reward[self.agents[1]]
+        done = {self.agents[0]: self.is_done(),
+                self.agents[1]: self.is_done()}
         observation = {self.agents[0]: self._get_obs(0),
                        self.agents[1]: self._get_obs(1)}
         info = {self.agents[0]: self._get_info(0),
@@ -482,8 +490,8 @@ class PassingGame(ParallelEnv):
             # self.swift_backend.set_camera_pose([2.5, 2.5, 2.5], [-1, -1, -1])
             # self.swift_backend.set_camera_pose([0, -8./3, .8], [0, 8./3, -1.])
             self.swift_backend.set_camera_pose([1.5, 2.5, 1.8], [-1.5, -2.5, -1.8])
-            
-        # Update Joint Angles 
+
+        # Update Joint Angles
         ang_signs = np.array([1, -1, 1, 1])  # env/panda mapping
         ang_offsets = np.array([0., -.27, -.48, 3.00])
         # Robot 0
